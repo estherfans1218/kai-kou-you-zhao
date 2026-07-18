@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Category = "推荐" | "职场" | "家庭" | "社交" | "边界";
 
@@ -15,6 +15,11 @@ type CaseCard = {
   response: string;
   reason: string;
   accent: "violet" | "coral" | "mint" | "yellow";
+  rounds?: Array<{
+    opponent: string;
+    response: string;
+    note: string;
+  }>;
 };
 
 const cases: CaseCard[] = [
@@ -29,6 +34,18 @@ const cases: CaseCard[] = [
     response: "具体是哪一部分让你觉得想当然？我们可以直接看数据。",
     reason: "不接情绪，把举证责任推回对方。",
     accent: "violet",
+    rounds: [
+      {
+        opponent: "数据谁不会看？问题就是你的思路还不成熟。",
+        response: "如果你有不同判断，可以指出对应的数据或环节，我们逐项讨论。",
+        note: "对方继续模糊评价时，重复要求具体依据。",
+      },
+      {
+        opponent: "你怎么总喜欢抬杠？听不懂别人是在给你建议吗？",
+        response: "我愿意听建议，所以才希望把建议说具体，这样我才能真正调整。",
+        note: "把“抬杠”的帽子拿掉，再把对话拉回工作目标。",
+      },
+    ],
   },
   {
     id: "case-02",
@@ -41,6 +58,13 @@ const cases: CaseCard[] = [
     response: "我知道你是关心我，但什么生活适合我，我想自己决定。",
     reason: "承认善意，不等于交出决定权。",
     accent: "coral",
+    rounds: [
+      {
+        opponent: "我们吃过的盐比你吃过的饭都多，还会害你吗？",
+        response: "我相信你们是为我好，但经验可以参考，决定和结果需要我自己承担。",
+        note: "不否定长辈经验，也不把决定权让出去。",
+      },
+    ],
   },
   {
     id: "case-03",
@@ -53,6 +77,13 @@ const cases: CaseCard[] = [
     response: "好不好笑可以有分歧，但我已经说了这让我不舒服。",
     reason: "不争论动机，只确认你的真实感受。",
     accent: "yellow",
+    rounds: [
+      {
+        opponent: "大家都没觉得有问题，就你事多。",
+        response: "别人是否介意由别人决定，我现在是在告诉你我的边界。",
+        note: "不进入少数服从多数的陷阱。",
+      },
+    ],
   },
   {
     id: "case-04",
@@ -77,6 +108,18 @@ const cases: CaseCard[] = [
     response: "可以，我手上还有 A 和 B，您希望我先暂停哪一个？",
     reason: "不直接对抗，把取舍变成明确的工作决策。",
     accent: "violet",
+    rounds: [
+      {
+        opponent: "年轻人要有担当，这点事还要算得这么清楚？",
+        response: "我愿意承担，但为了保证交付质量，需要您确认今晚最优先的是哪一项。",
+        note: "不争论态度，继续要求明确工作取舍。",
+      },
+      {
+        opponent: "都重要，你自己想办法。",
+        response: "明白。我会先完成这项临时任务，A 和 B 将顺延，我稍后邮件同步新的时间安排。",
+        note: "无法获得取舍时，主动给出方案并书面留痕。",
+      },
+    ],
   },
   {
     id: "case-06",
@@ -113,6 +156,13 @@ const cases: CaseCard[] = [
     response: "我今天不喝酒，但不影响我认真和大家吃这顿饭。",
     reason: "拒绝被二选一，重新定义你的参与方式。",
     accent: "yellow",
+    rounds: [
+      {
+        opponent: "不喝就是不给我面子，今天必须喝一杯。",
+        response: "我的心意不需要用喝酒证明。饮料我陪大家碰杯，酒我不喝。",
+        note: "提供替代参与方式，但不松动核心边界。",
+      },
+    ],
   },
 ];
 
@@ -129,13 +179,15 @@ type NavId = (typeof navItems)[number]["id"];
 export default function Home() {
   const [activeNav, setActiveNav] = useState<NavId>("plaza");
   const [category, setCategory] = useState<Category>("推荐");
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [activeCaseIndex, setActiveCaseIndex] = useState(0);
+  const [dialogueStep, setDialogueStep] = useState(0);
   const [saved, setSaved] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [relationship, setRelationship] = useState("同事");
   const [goal, setGoal] = useState("清楚表达");
   const [showDemoResult, setShowDemoResult] = useState(false);
   const [practiceChoice, setPracticeChoice] = useState<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("speak-power-saved");
@@ -149,6 +201,9 @@ export default function Home() {
         : cases.filter((item) => item.category === category),
     [category],
   );
+
+  const activeCase = visibleCases[Math.min(activeCaseIndex, visibleCases.length - 1)];
+  const totalDialogueSteps = 1 + (activeCase?.rounds?.length ?? 0);
 
   const savedCases = cases.filter((item) => saved.includes(item.id));
 
@@ -165,6 +220,28 @@ export default function Home() {
   function navigate(id: NavId) {
     setActiveNav(id);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function switchCategory(nextCategory: Category) {
+    setCategory(nextCategory);
+    setActiveCaseIndex(0);
+    setDialogueStep(0);
+  }
+
+  function moveCase(direction: 1 | -1) {
+    setActiveCaseIndex((current) => {
+      const next = (current + direction + visibleCases.length) % visibleCases.length;
+      return next;
+    });
+    setDialogueStep(0);
+  }
+
+  function openSavedCase(item: CaseCard) {
+    const categoryCases = cases.filter((entry) => entry.category === item.category);
+    switchCategory(item.category);
+    setActiveCaseIndex(Math.max(0, categoryCases.findIndex((entry) => entry.id === item.id)));
+    setDialogueStep(1);
+    navigate("plaza");
   }
 
   return (
@@ -205,78 +282,125 @@ export default function Home() {
                 <button
                   key={item}
                   className={category === item ? "category active" : "category"}
-                  onClick={() => {
-                    setCategory(item);
-                    setExpanded(null);
-                  }}
+                  onClick={() => switchCategory(item)}
                 >
                   {item}
                 </button>
               ))}
             </div>
 
-            <div className="case-feed">
-              {visibleCases.map((item, index) => (
-                <div key={item.id}>
-                  <article className={`case-card accent-${item.accent} ${expanded === item.id ? "is-open" : ""}`}>
-                    <div className="card-index">{String(index + 1).padStart(2, "0")}</div>
-                    <div className="card-meta">
-                      <span className="scene-tag">{item.category} · {item.relation}</span>
-                      <span className={`risk-tag risk-${item.risk}`}>{item.risk}</span>
+            {activeCase && (
+              <section
+                className="deck-viewer"
+                onTouchStart={(event) => {
+                  touchStartY.current = event.changedTouches[0]?.clientY ?? null;
+                }}
+                onTouchEnd={(event) => {
+                  const target = event.target as HTMLElement;
+                  if (target.closest(".dialogue-scroll") || touchStartY.current === null) return;
+                  const endY = event.changedTouches[0]?.clientY ?? touchStartY.current;
+                  const distance = touchStartY.current - endY;
+                  if (Math.abs(distance) > 65) moveCase(distance > 0 ? 1 : -1);
+                  touchStartY.current = null;
+                }}
+              >
+                <div className="deck-status">
+                  <span className="content-type">
+                    {activeCase.rounds?.length ? `连续局 · ${totalDialogueSteps} 回合` : "单招局"}
+                  </span>
+                  <span>{String(activeCaseIndex + 1).padStart(2, "0")} / {String(visibleCases.length).padStart(2, "0")}</span>
+                </div>
+
+                <article key={activeCase.id} className={`dialogue-card accent-${activeCase.accent}`}>
+                  <div className="card-meta">
+                    <span className="scene-tag">{activeCase.category} · {activeCase.relation}</span>
+                    <span className="risk-tag">{activeCase.risk}</span>
+                  </div>
+
+                  <div className="dialogue-scroll" aria-live="polite">
+                    <div className="chat-row opponent-row">
+                      <span className="speaker">对方</span>
+                      <p>{activeCase.quote}</p>
                     </div>
 
-                    <div className="quote-wrap">
-                      <span className="quote-mark">“</span>
-                      <blockquote>{item.quote}</blockquote>
-                    </div>
-
-                    {expanded !== item.id ? (
-                      <div className="card-prompt">
-                        <span>如果是你，会怎么回？</span>
-                        <button
-                          className="reveal-button"
-                          aria-expanded="false"
-                          onClick={() => setExpanded(item.id)}
-                        >
-                          看看怎么拆 <b>↗</b>
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="answer-panel">
-                        <button className="collapse-button" onClick={() => setExpanded(null)} aria-label="收起解析">收起 −</button>
-                        <div className="situation-line">
-                          <small>这是什么局</small>
-                          <p>{item.situation}</p>
-                        </div>
-                        <div className="move-chip">推荐招式 · {item.move}</div>
-                        <p className="response-line">{item.response}</p>
-                        <div className="reason-line">
-                          <span>为什么有效</span>
-                          <p>{item.reason}</p>
-                        </div>
-                        <div className="answer-actions">
-                          <button
-                            className={saved.includes(item.id) ? "save-button saved" : "save-button"}
-                            onClick={() => toggleSave(item.id)}
-                          >
-                            {saved.includes(item.id) ? "已收入招式簿 ✓" : "收入招式簿"}
-                          </button>
-                          <button className="practice-link" onClick={() => navigate("practice")}>练一遍 →</button>
-                        </div>
+                    {dialogueStep === 0 && (
+                      <div className="thinking-prompt">
+                        <span>先别急着看答案</span>
+                        <strong>如果是你，这一刻会怎么回？</strong>
                       </div>
                     )}
-                  </article>
 
-                  {index === 2 && category === "推荐" && (
-                    <button className="challenge-card" onClick={() => navigate("practice")}>
-                      <span className="challenge-kicker">刷了三局，换你出招</span>
-                      <strong>1 分钟回应挑战</strong>
-                      <span className="challenge-arrow">开始练习 ↗</span>
-                    </button>
-                  )}
+                    {dialogueStep >= 1 && (
+                      <div className="turn-pair turn-in">
+                        <div className="chat-row self-row">
+                          <span className="speaker">你可以说</span>
+                          <p>{activeCase.response}</p>
+                        </div>
+                        <small className="coach-note">招式 · {activeCase.move}</small>
+                      </div>
+                    )}
+
+                    {activeCase.rounds?.slice(0, Math.max(0, dialogueStep - 1)).map((turn, index) => (
+                      <div className="turn-pair turn-in" key={`${activeCase.id}-round-${index}`}>
+                        <div className="round-divider"><span>第 {index + 2} 回合</span></div>
+                        <div className="chat-row opponent-row">
+                          <span className="speaker">对方继续</span>
+                          <p>{turn.opponent}</p>
+                        </div>
+                        <div className="chat-row self-row">
+                          <span className="speaker">你可以说</span>
+                          <p>{turn.response}</p>
+                        </div>
+                        <small className="coach-note">教练提示 · {turn.note}</small>
+                      </div>
+                    ))}
+
+                    {dialogueStep === totalDialogueSteps && (
+                      <div className="round-summary turn-in">
+                        <span>整局拆解</span>
+                        <strong>{activeCase.move}</strong>
+                        <p>{activeCase.situation}{activeCase.reason}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="dialogue-actions">
+                    {dialogueStep === 0 ? (
+                      <button className="round-action" onClick={() => setDialogueStep(1)}>
+                        看第一招 <b>↗</b>
+                      </button>
+                    ) : dialogueStep < totalDialogueSteps ? (
+                      <button className="round-action continue" onClick={() => setDialogueStep((step) => step + 1)}>
+                        对方又说了… <b>继续第 {dialogueStep + 1} 回合</b>
+                      </button>
+                    ) : (
+                      <div className="completed-actions">
+                        <button
+                          className={saved.includes(activeCase.id) ? "save-button saved" : "save-button"}
+                          onClick={() => toggleSave(activeCase.id)}
+                        >
+                          {saved.includes(activeCase.id) ? "已收入招式簿 ✓" : "收入招式簿"}
+                        </button>
+                        <button className="practice-link" onClick={() => navigate("practice")}>换我练一遍 →</button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+
+                <div className="deck-controls">
+                  <button onClick={() => moveCase(-1)} aria-label="上一局">←</button>
+                  <span><i /> 上滑或点击，换一局 <i /></span>
+                  <button onClick={() => moveCase(1)} aria-label="下一局">→</button>
                 </div>
-              ))}
-            </div>
+
+                {category === "推荐" && activeCaseIndex === 2 && (
+                  <button className="mini-challenge" onClick={() => navigate("practice")}>
+                    <span>已经看了三局</span>
+                    <strong>换你出招 · 1 分钟挑战 ↗</strong>
+                  </button>
+                )}
+              </section>
+            )}
 
             <section className="preview-strip">
               <span className="preview-badge">概念预览</span>
@@ -412,7 +536,7 @@ export default function Home() {
             {savedCases.length ? (
               <div className="saved-list">
                 {savedCases.map((item) => (
-                  <button key={item.id} onClick={() => { navigate("plaza"); setCategory(item.category); setExpanded(item.id); }}>
+                  <button key={item.id} onClick={() => openSavedCase(item)}>
                     <span>{item.move}</span>
                     <p>{item.response}</p>
                     <b>↗</b>
