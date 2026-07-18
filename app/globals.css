@@ -1346,6 +1346,477 @@ p {
   line-height: 1.6;
 }
 
+.plaza-tabs {
+  margin: 0 0 13px;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  border: 1.5px solid var(--ink);
+  border-radius: 15px;
+  background: var(--paper-deep);
+}
+
+.plaza-tabs button {
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.plaza-tabs button.active {
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.plaza-tabs strong {
+  font-size: 13px;
+}
+
+.plaza-tabs span {
+  font-size: 8px;
+}
+
+.stories-panel {
+  padding-top: 4px;
+}
+
+.stories-intro {
+  padding: 13px 3px 16px;
+}
+
+.stories-intro h2 {
+  margin-bottom: 8px;
+  font-family: "STKaiti", "KaiTi", sans-serif;
+  font-size: 23px;
+  line-height: 1.35;
+}
+
+.stories-intro p {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.story-list {
+  display: grid;
+  gap: 14px;
+}
+
+.story-card {
+  padding: 17px;
+  border: 1.5px solid var(--ink);
+  border-radius: 20px 20px 20px 6px;
+  background: var(--white);
+  box-shadow: 5px 5px 0 rgba(30, 25, 48, 0.11);
+}
+
+.story-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.story-meta span {
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: var(--yellow);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.story-meta small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.story-card h3 {
+  margin: 15px 0 8px;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.story-summary {
+  color: #5e5768;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.story-card details {
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px dashed var(--line);
+}
+
+.story-card summary {
+  display: flex;
+  justify-content: space-between;
+  color: var(--violet-dark);
+  font-size: 10px;
+  font-weight: 900;
+  list-style: none;
+  cursor: pointer;
+}
+
+.story-detail {
+  padding-top: 13px;
+}
+
+.story-detail span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--violet-dark);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.story-detail p {
+  margin-bottom: 12px;
+  color: #5e5768;
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.story-detail strong {
+  display: block;
+  padding: 11px;
+  border-left: 3px solid var(--violet);
+  background: rgba(111, 80, 255, 0.07);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.submit-story-trigger {
+  width: 100%;
+  margin-top: 17px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1.5px dashed var(--ink);
+  border-radius: 17px;
+  background: rgba(255, 253, 249, 0.48);
+  text-align: left;
+}
+
+.submit-story-trigger > span {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--coral);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.submit-story-trigger strong,
+.submit-story-trigger small {
+  display: block;
+}
+
+.submit-story-trigger strong {
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+
+.submit-story-trigger small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.submission-form {
+  margin-top: 11px;
+  padding: 16px;
+  display: grid;
+  gap: 13px;
+  border: 1.5px solid var(--ink);
+  border-radius: 18px;
+  background: var(--white);
+}
+
+.submission-form > label:not(.consent-row) {
+  color: var(--violet-dark);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.submission-form textarea {
+  width: 100%;
+  min-height: 80px;
+  margin-top: 6px;
+  padding: 11px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.consent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.consent-row input {
+  margin-top: 2px;
+  accent-color: var(--violet);
+}
+
+.form-error {
+  margin: 0;
+  color: #b53f34;
+  font-size: 9px;
+}
+
+.submission-success {
+  padding: 22px 10px;
+  text-align: center;
+}
+
+.submission-success > span {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--mint);
+  font-weight: 900;
+}
+
+.submission-success strong {
+  font-size: 14px;
+}
+
+.submission-success p {
+  margin: 7px auto 0;
+  max-width: 260px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.practice-mode-tabs {
+  margin: 22px -18px 18px;
+  padding: 2px 18px 8px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.practice-mode-tabs button {
+  min-width: 92px;
+  padding: 10px 12px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--white);
+  text-align: left;
+}
+
+.practice-mode-tabs button.active {
+  border: 2px solid var(--ink);
+  background: var(--yellow);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.practice-mode-tabs strong,
+.practice-mode-tabs small {
+  display: block;
+}
+
+.practice-mode-tabs strong {
+  font-size: 11px;
+}
+
+.practice-mode-tabs small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.method-label {
+  margin-bottom: 11px;
+  color: var(--violet-dark);
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.feynman-source,
+.feynman-recall,
+.roleplay-preview,
+.voice-practice {
+  padding: 18px;
+  border: 2px solid var(--ink);
+  border-radius: 21px 21px 21px 6px;
+  background: var(--white);
+  box-shadow: 5px 5px 0 rgba(30, 25, 48, 0.12);
+}
+
+.feynman-source > span,
+.feynman-recall > span {
+  color: var(--violet-dark);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.feynman-source h2,
+.feynman-recall h2,
+.roleplay-preview h2,
+.voice-practice h2 {
+  margin: 9px 0;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.feynman-source > p,
+.roleplay-preview > p,
+.voice-practice > p {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.feynman-source .primary-action,
+.voice-practice .primary-action {
+  margin-top: 16px;
+}
+
+.feynman-recall textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 13px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--paper);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.feynman-check {
+  margin-top: 12px;
+  padding: 13px;
+  display: grid;
+  gap: 7px;
+  border-radius: 12px;
+  background: rgba(184, 237, 207, 0.55);
+}
+
+.feynman-check strong {
+  font-size: 10px;
+}
+
+.feynman-check span {
+  font-size: 9px;
+}
+
+.recall-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.recall-actions button {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.roleplay-lines {
+  margin: 12px 0 16px;
+  display: grid;
+  gap: 8px;
+}
+
+.roleplay-lines p {
+  margin: 0;
+  padding: 11px;
+  border-radius: 12px;
+  background: var(--paper-deep);
+  font-size: 10px;
+}
+
+.roleplay-preview > button {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper-deep);
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.voice-practice {
+  text-align: center;
+}
+
+.voice-scenario {
+  margin-bottom: 18px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--paper-deep);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.voice-practice .voice-orb {
+  margin: 0 auto;
+}
+
+.voice-orb.listening {
+  animation: voice-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  50% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(255, 111, 97, 0.15); }
+}
+
+.voice-transcript {
+  margin-top: 15px;
+  padding: 13px;
+  border-radius: 12px;
+  background: rgba(184, 237, 207, 0.45);
+  text-align: left;
+}
+
+.voice-transcript span,
+.voice-transcript small {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.voice-transcript p {
+  margin: 6px 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .bottom-nav {
   width: calc(100% - 22px);
   max-width: 498px;

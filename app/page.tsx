@@ -1,8 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 import { cases, categories, type CaseCard, type Category } from "./data/cases";
+import { storyCases } from "./data/stories";
+
+type SpeechResultEvent = Event & {
+  results: {
+    length: number;
+    [index: number]: { [index: number]: { transcript: string } };
+  };
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  onresult: ((event: SpeechResultEvent) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+};
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 const navItems = [
   { id: "plaza", label: "广场", icon: "✦" },
@@ -24,6 +43,19 @@ export default function Home() {
   const [goal, setGoal] = useState("清楚表达");
   const [showDemoResult, setShowDemoResult] = useState(false);
   const [practiceChoice, setPracticeChoice] = useState<number | null>(null);
+  const [plazaView, setPlazaView] = useState<"moves" | "stories">("moves");
+  const [showSubmission, setShowSubmission] = useState(false);
+  const [submissionScene, setSubmissionScene] = useState("");
+  const [submissionResponse, setSubmissionResponse] = useState("");
+  const [submissionOutcome, setSubmissionOutcome] = useState("");
+  const [submissionConsent, setSubmissionConsent] = useState(false);
+  const [submissionStatus, setSubmissionStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [submissionError, setSubmissionError] = useState("");
+  const [practiceMode, setPracticeMode] = useState<"feynman" | "choice" | "roleplay" | "voice">("feynman");
+  const [feynmanHidden, setFeynmanHidden] = useState(false);
+  const [feynmanText, setFeynmanText] = useState("");
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [voiceStatus, setVoiceStatus] = useState<"idle" | "listening" | "done" | "unsupported">("idle");
   const touchStartY = useRef<number | null>(null);
 
   useEffect(() => {
@@ -81,6 +113,59 @@ export default function Home() {
     navigate("plaza");
   }
 
+  async function submitStory(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmissionStatus("sending");
+    setSubmissionError("");
+
+    try {
+      const response = await fetch("/api/submissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scene: submissionScene,
+          response: submissionResponse,
+          outcome: submissionOutcome,
+          consent: submissionConsent,
+        }),
+      });
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(result.error ?? "提交失败，请稍后再试");
+      setSubmissionStatus("sent");
+    } catch (error) {
+      setSubmissionStatus("idle");
+      setSubmissionError(error instanceof Error ? error.message : "提交失败，请稍后再试");
+    }
+  }
+
+  function startVoicePractice() {
+    const speechWindow = window as Window & {
+      SpeechRecognition?: SpeechRecognitionConstructor;
+      webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    };
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      setVoiceStatus("unsupported");
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = "zh-CN";
+    recognition.interimResults = true;
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let index = 0; index < event.results.length; index += 1) {
+        transcript += event.results[index]?.[0]?.transcript ?? "";
+      }
+      setVoiceTranscript(transcript);
+    };
+    recognition.onerror = () => setVoiceStatus("idle");
+    recognition.onend = () => setVoiceStatus((status) => status === "unsupported" ? status : "done");
+    setVoiceTranscript("");
+    setVoiceStatus("listening");
+    recognition.start();
+  }
+
   return (
     <main className="app-shell">
       <div className="ambient ambient-one" />
@@ -114,19 +199,30 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="category-row" aria-label="场景分类">
-              {categories.map((item) => (
-                <button
-                  key={item}
-                  className={category === item ? "category active" : "category"}
-                  onClick={() => switchCategory(item)}
-                >
-                  {item}
-                </button>
-              ))}
+            <div className="plaza-tabs" aria-label="广场内容类型">
+              <button className={plazaView === "moves" ? "active" : ""} onClick={() => setPlazaView("moves")}>
+                <strong>拆招</strong><span>学策略</span>
+              </button>
+              <button className={plazaView === "stories" ? "active" : ""} onClick={() => setPlazaView("stories")}>
+                <strong>案例复盘</strong><span>看真实经过</span>
+              </button>
             </div>
 
-            {activeCase && (
+            {plazaView === "moves" && (
+              <div className="category-row" aria-label="场景分类">
+                {categories.map((item) => (
+                  <button
+                    key={item}
+                    className={category === item ? "category active" : "category"}
+                    onClick={() => switchCategory(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {plazaView === "moves" && activeCase && (
               <section
                 className="deck-viewer"
                 onTouchStart={(event) => {
@@ -239,12 +335,60 @@ export default function Home() {
               </section>
             )}
 
-            <section className="preview-strip">
-              <span className="preview-badge">概念预览</span>
-              <h2>这里以后，也会有她们的招</h2>
-              <p>匿名分享亲历情境，共同拆解更好的表达方式。</p>
-              <button disabled>共建广场 · 即将开放</button>
-            </section>
+            {plazaView === "stories" && (
+              <section className="stories-panel">
+                <div className="stories-intro">
+                  <span className="eyebrow">不是爽文，是复盘</span>
+                  <h2>真实情境里，事情后来怎么样了？</h2>
+                  <p>看经过、转折和结果，也允许“当时没说好”。公开内容均经过匿名和复合整理。</p>
+                </div>
+
+                <div className="story-list">
+                  {storyCases.map((story) => (
+                    <article className="story-card" key={story.id}>
+                      <div className="story-meta"><span>{story.category}</span><small>{story.sourceLabel}</small></div>
+                      <h3>{story.title}</h3>
+                      <p className="story-summary">{story.summary}</p>
+                      <details>
+                        <summary>展开完整复盘 <b>＋</b></summary>
+                        <div className="story-detail">
+                          <span>关键转折</span><p>{story.turningPoint}</p>
+                          <span>结果怎么看</span><p>{story.outcome}</p>
+                          <strong>{story.lesson}</strong>
+                        </div>
+                      </details>
+                    </article>
+                  ))}
+                </div>
+
+                <button className="submit-story-trigger" onClick={() => setShowSubmission((open) => !open)}>
+                  <span>＋</span>
+                  <div><strong>匿名分享一个亲历情境</strong><small>提交后进入待整理箱，不会直接公开</small></div>
+                </button>
+
+                {showSubmission && (
+                  <form className="submission-form" onSubmit={submitStory}>
+                    {submissionStatus === "sent" ? (
+                      <div className="submission-success">
+                        <span>✓</span><strong>已经收到</strong>
+                        <p>内容进入待整理箱，匿名化和结构检查后才能出现在案例复盘中。</p>
+                      </div>
+                    ) : (
+                      <>
+                        <label>发生了什么？<textarea required minLength={20} maxLength={1200} value={submissionScene} onChange={(event) => setSubmissionScene(event.target.value)} placeholder="请隐去姓名、公司、门店地址等信息……" /></label>
+                        <label>你当时怎么回应的？<textarea maxLength={600} value={submissionResponse} onChange={(event) => setSubmissionResponse(event.target.value)} placeholder="没来得及回应也可以如实写" /></label>
+                        <label>后来怎么样了？<textarea maxLength={600} value={submissionOutcome} onChange={(event) => setSubmissionOutcome(event.target.value)} placeholder="事情的结果、你的感受或复盘" /></label>
+                        <label className="consent-row"><input type="checkbox" checked={submissionConsent} onChange={(event) => setSubmissionConsent(event.target.checked)} />我已隐去可识别信息，并同意以匿名复合案例方式整理</label>
+                        {submissionError && <p className="form-error">{submissionError}</p>}
+                        <button className="primary-action" disabled={submissionStatus === "sending" || !submissionConsent || submissionScene.trim().length < 20}>
+                          {submissionStatus === "sending" ? "正在提交…" : "提交到待整理箱"}<span>↗</span>
+                        </button>
+                      </>
+                    )}
+                  </form>
+                )}
+              </section>
+            )}
           </div>
         )}
 
@@ -310,52 +454,99 @@ export default function Home() {
         {activeNav === "practice" && (
           <div className="page inner-page practice-page">
             <div className="practice-heading">
-              <span className="eyebrow">1 分钟回应挑战</span>
-              <span className="step-counter">01 / 03</span>
+              <span className="eyebrow">表达练习场</span>
+              <span className="step-counter">学会 ≠ 会用</span>
             </div>
-            <h1>领导临下班，<br />又塞来一项任务。</h1>
-            <div className="scene-bubble">
-              “这个你今晚顺手做一下，明早开会要用，也没多少东西。”
-            </div>
-            <p className="practice-question">你最想怎么回？</p>
-            <div className="practice-options">
+            <h1>把看懂的一招，<br />练成自己的话。</h1>
+
+            <div className="practice-mode-tabs">
               {[
-                "好的，我尽量今晚做完。",
-                "我手上还有 A 和 B，您希望我先暂停哪一个？",
-                "为什么每次都临下班才说？我不做。",
-              ].map((option, index) => (
-                <button
-                  key={option}
-                  className={practiceChoice === index ? "practice-option selected" : "practice-option"}
-                  onClick={() => setPracticeChoice(index)}
-                >
-                  <span>{String.fromCharCode(65 + index)}</span>
-                  {option}
+                ["feynman", "费曼复述", "讲明白"],
+                ["choice", "选择挑战", "做判断"],
+                ["roleplay", "自由对练", "接回合"],
+                ["voice", "开口练", "说出来"],
+              ].map(([id, title, hint]) => (
+                <button key={id} className={practiceMode === id ? "active" : ""} onClick={() => setPracticeMode(id as typeof practiceMode)}>
+                  <strong>{title}</strong><small>{hint}</small>
                 </button>
               ))}
             </div>
 
-            {practiceChoice !== null && (
-              <div className={practiceChoice === 1 ? "practice-feedback good" : "practice-feedback"}>
-                <strong>{practiceChoice === 1 ? "这一招很稳" : "再想一步"}</strong>
-                <p>
-                  {practiceChoice === 1
-                    ? "你没有直接对抗，而是让任务优先级和责任变得可确认。"
-                    : practiceChoice === 0
-                      ? "先答应可能让额外工作继续变得理所当然，可以试着要求明确优先级。"
-                      : "你的感受很真实，但直接质问可能升级冲突。先把工作取舍说清楚更安全。"}
-                </p>
-              </div>
+            {practiceMode === "feynman" && (
+              <section className="feynman-practice">
+                <div className="method-label">费曼学习法 · 看懂 → 隐藏 → 讲给别人听 → 查漏</div>
+                {!feynmanHidden ? (
+                  <div className="feynman-source">
+                    <span>今天要讲明白的一招</span>
+                    <h2>为什么“要求具体化”能应对模糊否定？</h2>
+                    <p>当对方只说“你不专业”“想得太简单”，你不需要证明自己没有问题。请对方指出具体环节和依据，才能把人身评价重新变成可讨论的事实。</p>
+                    <button className="primary-action" onClick={() => setFeynmanHidden(true)}>我看懂了，隐藏答案 <span>↗</span></button>
+                  </div>
+                ) : (
+                  <div className="feynman-recall">
+                    <span>现在请用自己的话讲给一个朋友听</span>
+                    <h2>它解决了什么？为什么有效？什么时候不适合用？</h2>
+                    <textarea value={feynmanText} onChange={(event) => setFeynmanText(event.target.value)} placeholder="不要背原话，像解释给完全不了解的人一样……" />
+                    {feynmanText.length >= 30 && (
+                      <div className="feynman-check">
+                        <strong>自查三个点</strong>
+                        <span>□ 有没有说清对方用了什么方式？</span>
+                        <span>□ 有没有讲明这招如何改变局面？</span>
+                        <span>□ 有没有提到权力差异和使用风险？</span>
+                      </div>
+                    )}
+                    <div className="recall-actions">
+                      <button onClick={() => setFeynmanHidden(false)}>回看参考</button>
+                      <button onClick={() => { setFeynmanText(""); setFeynmanHidden(false); }}>换一招</button>
+                    </div>
+                  </div>
+                )}
+              </section>
             )}
 
-            <section className="voice-preview">
-              <span className="preview-badge">概念预览</span>
-              <div className="voice-orb">声</div>
-              <div>
-                <h2>开口练，比默念更有用</h2>
-                <p>未来可以用语音模拟真实对话，并获得节奏反馈。</p>
-              </div>
-            </section>
+            {practiceMode === "choice" && (
+              <section className="choice-practice">
+                <div className="scene-bubble">“这个你今晚顺手做一下，明早开会要用，也没多少东西。”</div>
+                <p className="practice-question">你最想怎么回？</p>
+                <div className="practice-options">
+                  {["好的，我尽量今晚做完。", "我手上还有 A 和 B，您希望我先暂停哪一个？", "为什么每次都临下班才说？我不做。"].map((option, index) => (
+                    <button key={option} className={practiceChoice === index ? "practice-option selected" : "practice-option"} onClick={() => setPracticeChoice(index)}>
+                      <span>{String.fromCharCode(65 + index)}</span>{option}
+                    </button>
+                  ))}
+                </div>
+                {practiceChoice !== null && (
+                  <div className={practiceChoice === 1 ? "practice-feedback good" : "practice-feedback"}>
+                    <strong>{practiceChoice === 1 ? "这一招很稳" : "再想一步"}</strong>
+                    <p>{practiceChoice === 1 ? "你让任务优先级和责任变得可确认。" : practiceChoice === 0 ? "先答应可能让额外工作继续变得理所当然。" : "感受真实，但直接质问可能升级冲突。先把工作取舍说清楚更安全。"}</p>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {practiceMode === "roleplay" && (
+              <section className="roleplay-preview">
+                <span className="preview-badge">AI 接入下一步</span>
+                <div className="roleplay-lines"><p>对方：你是不是对我的安排有意见？</p><p>你：输入自己的回应后，对方会继续追问。</p></div>
+                <h2>自由回答，对方根据你的话继续出招</h2>
+                <p>结束后从目标、边界、关系成本和表达清晰度四个维度复盘。</p>
+                <button disabled>动态对练 · 即将接入</button>
+              </section>
+            )}
+
+            {practiceMode === "voice" && (
+              <section className="voice-practice">
+                <div className="voice-scenario">“我只是把你的私聊截图发群里，又没说你坏话，至于吗？”</div>
+                <div className={voiceStatus === "listening" ? "voice-orb listening" : "voice-orb"}>声</div>
+                <h2>{voiceStatus === "listening" ? "正在听你说…" : "不开麦克风权限，也能使用其他练习"}</h2>
+                <p>语音只用于浏览器实时转写，本版不上传或保存音频。</p>
+                <button className="primary-action" onClick={startVoicePractice} disabled={voiceStatus === "listening"}>
+                  {voiceStatus === "listening" ? "请直接说出回应" : "开始开口练"}<span>↗</span>
+                </button>
+                {voiceStatus === "unsupported" && <div className="practice-feedback">当前浏览器不支持实时语音识别，请使用最新版 Chrome 或 Edge，或改用费曼复述。</div>}
+                {voiceTranscript && <div className="voice-transcript"><span>你刚才说</span><p>{voiceTranscript}</p><small>再读一遍：有没有明确提出“撤回”和“以后先征得同意”？</small></div>}
+              </section>
+            )}
           </div>
         )}
 
