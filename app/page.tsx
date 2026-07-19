@@ -32,6 +32,69 @@ const navItems = [
 
 type NavId = (typeof navItems)[number]["id"];
 
+type StoryNode = {
+  setting: string;
+  speaker: string;
+  line: string;
+  choices?: Array<{ text: string; next: string; note: string }>;
+  ending?: { title: string; result: string; score: string };
+};
+
+const branchStory: Record<string, StoryNode> = {
+  start: {
+    setting: "周五 18:27 · 办公室只剩三个人",
+    speaker: "直属上级",
+    line: "这个你今晚顺手做一下，明早开会要用，也没多少东西。",
+    choices: [
+      { text: "好的，我尽量今晚做完。", next: "overload", note: "你接下了任务，但没有确认原任务如何调整。" },
+      { text: "我手上还有 A 和 B，您希望我先暂停哪一个？", next: "priority", note: "你没有直接拒绝，而是把取舍交还给安排任务的人。" },
+      { text: "为什么每次都临下班才说？我不做。", next: "conflict", note: "你的不满有依据，但开场就讨论动机，容易让任务问题变成态度冲突。" },
+    ],
+  },
+  priority: {
+    setting: "18:29 · 对方停了一下",
+    speaker: "直属上级",
+    line: "都挺重要的。年轻人有点担当，别什么都算得那么清楚。",
+    choices: [
+      { text: "明白。那我先做临时任务，A、B 顺延，稍后邮件同步新的时间。", next: "clearEnd", note: "你给出执行方案，也把变化留在了书面记录里。" },
+      { text: "行吧，那我都做。", next: "overload", note: "表面结束了对话，但风险仍全部留在你这里。" },
+    ],
+  },
+  conflict: {
+    setting: "18:28 · 气氛突然变硬",
+    speaker: "直属上级",
+    line: "你这是什么态度？工作安排还需要跟你商量吗？",
+    choices: [
+      { text: "我不是拒绝安排。我需要确认优先级，才能保证最重要的内容按时交付。", next: "repairEnd", note: "你修复了语气，同时把话题拉回交付。" },
+      { text: "反正我下班了，明天再说。", next: "hardEnd", note: "边界很清楚，但没有处理任务交接，关系和绩效风险都更高。" },
+    ],
+  },
+  overload: {
+    setting: "23:46 · 电脑屏幕还亮着",
+    speaker: "系统旁白",
+    line: "临时任务做完了，A 没有按原计划交付。第二天会议上，没人记得优先级从未被确认。",
+    ending: { title: "结局：责任留在了你身上", result: "下一次先问清“暂停哪一个”，不要让“都重要”自动变成“都由你兜底”。", score: "边界 35 · 清晰 52" },
+  },
+  clearEnd: {
+    setting: "18:34 · 邮件已发送",
+    speaker: "系统旁白",
+    line: "对方没有再回复，但第二天所有人都能看到任务调整的时间线。临时工作完成，A、B 的延期也有明确原因。",
+    ending: { title: "结局：稳稳接住，也没有默默背下", result: "你同时做到了接任务、说代价、留记录。现实里未必每次都顺利，但责任变得可确认。", score: "边界 88 · 清晰 94" },
+  },
+  repairEnd: {
+    setting: "18:33 · 对话回到工作",
+    speaker: "系统旁白",
+    line: "上级最终让你暂停 A，先完成临时任务。你把新的安排发进项目群，冲突没有继续升级。",
+    ending: { title: "结局：把失控的开场拉了回来", result: "表达失手不代表整局失败。重新说目标、优先级和交付，可以修复对话。", score: "边界 77 · 修复 91" },
+  },
+  hardEnd: {
+    setting: "第二天 09:10 · 会议开始",
+    speaker: "系统旁白",
+    line: "任务无人接手，会议现场临时补救。你的边界被看见了，但讨论焦点变成了“是否配合”。",
+    ending: { title: "结局：守住时间，丢了叙事", result: "必要时可以拒绝，但最好同时说清现有任务、可交付时间和交接方案。", score: "边界 90 · 策略 43" },
+  },
+};
+
 export default function Home() {
   const [activeNav, setActiveNav] = useState<NavId>("plaza");
   const [category, setCategory] = useState<Category>("推荐");
@@ -43,6 +106,8 @@ export default function Home() {
   const [goal, setGoal] = useState("清楚表达");
   const [showDemoResult, setShowDemoResult] = useState(false);
   const [practiceChoice, setPracticeChoice] = useState<number | null>(null);
+  const [storyNodeId, setStoryNodeId] = useState("start");
+  const [storyTrail, setStoryTrail] = useState<string[]>([]);
   const [plazaView, setPlazaView] = useState<"moves" | "stories">("moves");
   const [showSubmission, setShowSubmission] = useState(false);
   const [submissionScene, setSubmissionScene] = useState("");
@@ -355,6 +420,8 @@ export default function Home() {
                           <span>关键转折</span><p>{story.turningPoint}</p>
                           <span>结果怎么看</span><p>{story.outcome}</p>
                           <strong>{story.lesson}</strong>
+                          <p className="source-note">{story.sourceNote}</p>
+                          {story.sourceUrl && <a className="source-link" href={story.sourceUrl} target="_blank" rel="noreferrer">查看公开来源 ↗</a>}
                         </div>
                       </details>
                     </article>
@@ -459,12 +526,24 @@ export default function Home() {
             </div>
             <h1>把看懂的一招，<br />练成自己的话。</h1>
 
+            <div className="training-levels" aria-label="训练版本">
+              <button className="training-level active" onClick={() => setPracticeMode("feynman")}>
+                <span>免费</span><strong>日常训练</strong><small>复述 · 选择 · 开口</small>
+              </button>
+              <button className="training-level" onClick={() => setPracticeMode("choice")}>
+                <span>付费剧情包</span><strong>分支剧情</strong><small>本局可试玩</small>
+              </button>
+              <button className="training-level pro" onClick={() => setPracticeMode("roleplay")}>
+                <span>升级版</span><strong>沉浸对练</strong><small>自由回答 · AI 追问</small>
+              </button>
+            </div>
+
             <div className="practice-mode-tabs">
               {[
-                ["feynman", "费曼复述", "讲明白"],
-                ["choice", "选择挑战", "做判断"],
-                ["roleplay", "自由对练", "接回合"],
-                ["voice", "开口练", "说出来"],
+                ["feynman", "费曼复述", "免费"],
+                ["choice", "剧情闯关", "试玩"],
+                ["roleplay", "沉浸对练", "升级版"],
+                ["voice", "开口练", "免费"],
               ].map(([id, title, hint]) => (
                 <button key={id} className={practiceMode === id ? "active" : ""} onClick={() => setPracticeMode(id as typeof practiceMode)}>
                   <strong>{title}</strong><small>{hint}</small>
@@ -505,32 +584,69 @@ export default function Home() {
             )}
 
             {practiceMode === "choice" && (
-              <section className="choice-practice">
-                <div className="scene-bubble">“这个你今晚顺手做一下，明早开会要用，也没多少东西。”</div>
-                <p className="practice-question">你最想怎么回？</p>
-                <div className="practice-options">
-                  {["好的，我尽量今晚做完。", "我手上还有 A 和 B，您希望我先暂停哪一个？", "为什么每次都临下班才说？我不做。"].map((option, index) => (
-                    <button key={option} className={practiceChoice === index ? "practice-option selected" : "practice-option"} onClick={() => setPracticeChoice(index)}>
-                      <span>{String.fromCharCode(65 + index)}</span>{option}
-                    </button>
-                  ))}
+              <section className="choice-practice story-practice">
+                <div className="story-game-head">
+                  <div><span>免费试玩 · 第 1 章</span><strong>下班前 3 分钟</strong></div>
+                  <small>{storyTrail.length + 1} / 3 回合</small>
                 </div>
-                {practiceChoice !== null && (
-                  <div className={practiceChoice === 1 ? "practice-feedback good" : "practice-feedback"}>
-                    <strong>{practiceChoice === 1 ? "这一招很稳" : "再想一步"}</strong>
-                    <p>{practiceChoice === 1 ? "你让任务优先级和责任变得可确认。" : practiceChoice === 0 ? "先答应可能让额外工作继续变得理所当然。" : "感受真实，但直接质问可能升级冲突。先把工作取舍说清楚更安全。"}</p>
+                <div className="story-scene" aria-live="polite">
+                  <div className="office-window"><i /><i /><i /></div>
+                  <span>{branchStory[storyNodeId].setting}</span>
+                  <div className="scene-speaker">{branchStory[storyNodeId].speaker}</div>
+                  <p>{branchStory[storyNodeId].line}</p>
+                </div>
+
+                {branchStory[storyNodeId].choices && (
+                  <>
+                    <p className="practice-question">轮到你了。怎么接？</p>
+                    <div className="practice-options">
+                      {branchStory[storyNodeId].choices?.map((option, index) => (
+                        <button
+                          key={option.text}
+                          className="practice-option"
+                          onClick={() => {
+                            setPracticeChoice(index);
+                            setStoryTrail((trail) => [...trail, storyNodeId]);
+                            setStoryNodeId(option.next);
+                          }}
+                        >
+                          <span>{String.fromCharCode(65 + index)}</span>{option.text}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {branchStory[storyNodeId].ending && (
+                  <div className="story-ending">
+                    <span>{branchStory[storyNodeId].ending?.score}</span>
+                    <h2>{branchStory[storyNodeId].ending?.title}</h2>
+                    <p>{branchStory[storyNodeId].ending?.result}</p>
+                    <button onClick={() => { setStoryNodeId("start"); setStoryTrail([]); setPracticeChoice(null); }}>换个选择，再走一次 ↻</button>
                   </div>
                 )}
+
+                <div className="episode-lock">
+                  <div><strong>完整剧情包 · 12 个高压场景</strong><small>每个选择都会改变后续关系、风险和结局</small></div>
+                  <span>付费解锁</span>
+                </div>
               </section>
             )}
 
             {practiceMode === "roleplay" && (
               <section className="roleplay-preview">
-                <span className="preview-badge">AI 接入下一步</span>
-                <div className="roleplay-lines"><p>对方：你是不是对我的安排有意见？</p><p>你：输入自己的回应后，对方会继续追问。</p></div>
-                <h2>自由回答，对方根据你的话继续出招</h2>
-                <p>结束后从目标、边界、关系成本和表达清晰度四个维度复盘。</p>
-                <button disabled>动态对练 · 即将接入</button>
+                <div className="immersive-stage">
+                  <div className="stage-light" />
+                  <div className="stage-avatar">上级</div>
+                  <div className="live-wave"><i /><i /><i /><i /></div>
+                  <small>对方正在等你回答…</small>
+                </div>
+                <span className="preview-badge">升级版 · AI 实时扮演</span>
+                <h2>没有选项，也没有标准答案</h2>
+                <p>你现场组织语言，对方会根据你的用词、停顿和立场继续追问。可以选择职场、家庭、消费或社交剧情，并调节对方的强势程度。</p>
+                <div className="roleplay-features"><span>自由对话</span><span>语音压力</span><span>动态剧情</span><span>赛后复盘</span></div>
+                <button disabled>升级版功能 · 付费解锁</button>
+                <small className="demo-policy">比赛演示会保留 1 次完整体验，正式版再接支付。</small>
               </section>
             )}
 
