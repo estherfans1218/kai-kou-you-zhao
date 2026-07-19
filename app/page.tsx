@@ -6,7 +6,7 @@ import { PracticeCenter } from "./components/PracticeCenter";
 import { PublishCenter } from "./components/PublishCenter";
 import { RealPlaza } from "./components/RealPlaza";
 import { MySubmissions } from "./components/MySubmissions";
-import { cases, categories, type CaseCard, type Category } from "./data/cases";
+import { moves, moveCategories, type MoveCard, type MoveCategory } from "./data/moves";
 
 const navItems = [
   { id: "plaza", label: "广场", icon: "✦" },
@@ -19,29 +19,32 @@ type NavId = (typeof navItems)[number]["id"];
 
 export default function Home() {
   const [activeNav, setActiveNav] = useState<NavId>("plaza");
-  const [category, setCategory] = useState<Category>("推荐");
+  const [category, setCategory] = useState<MoveCategory>("全部");
   const [activeCaseIndex, setActiveCaseIndex] = useState(0);
   const [dialogueStep, setDialogueStep] = useState(0);
+  const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
   const [saved, setSaved] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
-    try { return JSON.parse(window.localStorage.getItem("speak-power-saved") ?? "[]") as string[]; }
+    try {
+      const stored = JSON.parse(window.localStorage.getItem("speak-power-saved") ?? "[]") as string[];
+      return stored.filter((id) => moves.some((move) => move.id === id));
+    }
     catch { return []; }
   });
   const [plazaView, setPlazaView] = useState<"moves" | "stories">("moves");
   const touchStartY = useRef<number | null>(null);
 
-  const visibleCases = useMemo(
+  const visibleMoves = useMemo(
     () =>
-      category === "推荐"
-        ? cases
-        : cases.filter((item) => item.category === category),
+      category === "全部"
+        ? moves
+        : moves.filter((item) => item.category === category),
     [category],
   );
 
-  const activeCase = visibleCases[Math.min(activeCaseIndex, visibleCases.length - 1)];
-  const totalDialogueSteps = 1 + (activeCase?.rounds?.length ?? 0);
-
-  const savedCases = cases.filter((item) => saved.includes(item.id));
+  const activeMove = visibleMoves[Math.min(activeCaseIndex, visibleMoves.length - 1)];
+  const activeBranch = selectedBranch === null ? null : activeMove?.branches[selectedBranch];
+  const savedMoves = moves.filter((item) => saved.includes(item.id));
 
   function toggleSave(id: string) {
     setSaved((current) => {
@@ -58,24 +61,26 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function switchCategory(nextCategory: Category) {
+  function switchCategory(nextCategory: MoveCategory) {
     setCategory(nextCategory);
     setActiveCaseIndex(0);
     setDialogueStep(0);
+    setSelectedBranch(null);
   }
 
   function moveCase(direction: 1 | -1) {
     setActiveCaseIndex((current) => {
-      const next = (current + direction + visibleCases.length) % visibleCases.length;
+      const next = (current + direction + visibleMoves.length) % visibleMoves.length;
       return next;
     });
     setDialogueStep(0);
+    setSelectedBranch(null);
   }
 
-  function openSavedCase(item: CaseCard) {
-    const categoryCases = cases.filter((entry) => entry.category === item.category);
+  function openSavedMove(item: MoveCard) {
+    const categoryMoves = moves.filter((entry) => entry.category === item.category);
     switchCategory(item.category);
-    setActiveCaseIndex(Math.max(0, categoryCases.findIndex((entry) => entry.id === item.id)));
+    setActiveCaseIndex(Math.max(0, categoryMoves.findIndex((entry) => entry.id === item.id)));
     setDialogueStep(1);
     navigate("plaza");
   }
@@ -105,7 +110,7 @@ export default function Home() {
             <div className="page-intro">
               <div>
                 <span className="eyebrow">招式广场</span>
-                <h1>今天，想看<br />哪一种局？</h1>
+                <h1>今天，想练<br />哪一种招？</h1>
               </div>
               <div className="intro-stamp" aria-hidden="true">
                 <span>03</span>
@@ -124,7 +129,7 @@ export default function Home() {
 
             {plazaView === "moves" && (
               <div className="category-row" aria-label="场景分类">
-                {categories.map((item) => (
+                {moveCategories.map((item) => (
                   <button
                     key={item}
                     className={category === item ? "category active" : "category"}
@@ -136,7 +141,7 @@ export default function Home() {
               </div>
             )}
 
-            {plazaView === "moves" && activeCase && (
+            {plazaView === "moves" && activeMove && (
               <section
                 className="deck-viewer"
                 onTouchStart={(event) => {
@@ -152,22 +157,25 @@ export default function Home() {
                 }}
               >
                 <div className="deck-status">
-                  <span className="content-type">
-                    {activeCase.rounds?.length ? `连续局 · ${totalDialogueSteps} 回合` : "单招局"}
-                  </span>
-                  <span>{String(activeCaseIndex + 1).padStart(2, "0")} / {String(visibleCases.length).padStart(2, "0")}</span>
+                  <span className="content-type">四路连续招 · 3 回合</span>
+                  <span>{String(activeCaseIndex + 1).padStart(2, "0")} / {String(visibleMoves.length).padStart(2, "0")}</span>
                 </div>
 
-                <article key={activeCase.id} className={`dialogue-card accent-${activeCase.accent}`}>
+                <article key={activeMove.id} className={`dialogue-card move-dialogue-card accent-${activeMove.accent}`}>
                   <div className="card-meta">
-                    <span className="scene-tag">{activeCase.category} · {activeCase.relation}</span>
-                    <span className="risk-tag">{activeCase.risk}</span>
+                    <span className="scene-tag">第 {activeMove.number} 招 · {activeMove.name}</span>
+                    <span className="risk-tag">{activeMove.risk}</span>
                   </div>
 
                   <div className="dialogue-scroll" aria-live="polite">
+                    <div className="move-intro-line">
+                      <span>{activeMove.category}</span>
+                      <strong>{activeMove.short}</strong>
+                      <small>{activeMove.opening.scene} · {activeMove.opening.relation}</small>
+                    </div>
                     <div className="chat-row opponent-row">
                       <span className="speaker">对方</span>
-                      <p>{activeCase.quote}</p>
+                      <p>{activeMove.opening.opponent}</p>
                     </div>
 
                     {dialogueStep === 0 && (
@@ -181,32 +189,67 @@ export default function Home() {
                       <div className="turn-pair turn-in">
                         <div className="chat-row self-row">
                           <span className="speaker">你可以说</span>
-                          <p>{activeCase.response}</p>
+                          <p>{activeMove.opening.response}</p>
                         </div>
-                        <small className="coach-note">招式 · {activeCase.move}</small>
+                        <small className="coach-note">第 1 回合 · {activeMove.opening.note}</small>
                       </div>
                     )}
 
-                    {activeCase.rounds?.slice(0, Math.max(0, dialogueStep - 1)).map((turn, index) => (
-                      <div className="turn-pair turn-in" key={`${activeCase.id}-round-${index}`}>
-                        <div className="round-divider"><span>第 {index + 2} 回合</span></div>
+                    {dialogueStep === 1 && selectedBranch === null && (
+                      <div className="branch-picker turn-in">
+                        <span>对方接下来可能怎么走？</span>
+                        <div>{activeMove.branches.map((branch, index) => (
+                          <button key={branch.label} onClick={() => { setSelectedBranch(index); setDialogueStep(2); }}>
+                            <small>路径 {index + 1}</small><strong>{branch.label}</strong>
+                          </button>
+                        ))}</div>
+                      </div>
+                    )}
+
+                    {activeBranch && dialogueStep >= 2 && (
+                      <div className="turn-pair turn-in">
+                        <div className="round-divider"><span>第 2 回合 · {activeBranch.label}</span></div>
                         <div className="chat-row opponent-row">
                           <span className="speaker">对方继续</span>
-                          <p>{turn.opponent}</p>
+                          <p>{activeBranch.opponent}</p>
                         </div>
                         <div className="chat-row self-row">
                           <span className="speaker">你可以说</span>
-                          <p>{turn.response}</p>
+                          <p>{activeBranch.response}</p>
                         </div>
-                        <small className="coach-note">教练提示 · {turn.note}</small>
+                        <small className="coach-note">教练提示 · {activeBranch.note}</small>
                       </div>
-                    ))}
+                    )}
 
-                    {dialogueStep === totalDialogueSteps && (
-                      <div className="round-summary turn-in">
-                        <span>整局拆解</span>
-                        <strong>{activeCase.move}</strong>
-                        <p>{activeCase.situation}{activeCase.reason}</p>
+                    {activeBranch && dialogueStep >= 3 && (
+                      <div className="turn-pair turn-in">
+                        <div className="round-divider"><span>第 3 回合 · 收束</span></div>
+                        <div className="chat-row opponent-row">
+                          <span className="speaker">对方再说</span>
+                          <p>{activeBranch.closing.opponent}</p>
+                        </div>
+                        <div className="chat-row self-row">
+                          <span className="speaker">你可以说</span>
+                          <p>{activeBranch.closing.response}</p>
+                        </div>
+                        <small className="coach-note">收束提示 · {activeBranch.closing.note}</small>
+                      </div>
+                    )}
+
+                    {dialogueStep === 3 && (
+                      <div className="move-learning turn-in">
+                        <div className="round-summary">
+                          <span>这一招的骨架</span>
+                          <strong>{activeMove.formula}</strong>
+                          <p>{activeMove.goal}</p>
+                        </div>
+                        <details className="method-evidence">
+                          <summary>查看方法依据与风险边界 <b>＋</b></summary>
+                          <div><span>识别信号</span><p>{activeMove.pattern}</p></div>
+                          <div><span>底层依据</span>{activeMove.theory.map((item) => <p key={item}>· {item}</p>)}</div>
+                          <div><span>权力关系</span><p>{activeMove.power}</p></div>
+                          <div className="risk-boundary"><span>什么时候不要硬用</span><p>{activeMove.riskBoundary}</p></div>
+                        </details>
                       </div>
                     )}
                   </div>
@@ -216,19 +259,24 @@ export default function Home() {
                       <button className="round-action" onClick={() => setDialogueStep(1)}>
                         看第一招 <b>↗</b>
                       </button>
-                    ) : dialogueStep < totalDialogueSteps ? (
-                      <button className="round-action continue" onClick={() => setDialogueStep((step) => step + 1)}>
-                        对方又说了… <b>继续第 {dialogueStep + 1} 回合</b>
+                    ) : dialogueStep === 1 && selectedBranch === null ? (
+                      <div className="branch-action-hint">选择一种对方反应，继续拆招</div>
+                    ) : dialogueStep === 2 ? (
+                      <button className="round-action continue" onClick={() => setDialogueStep(3)}>
+                        对方还没停… <b>看第 3 回合</b>
                       </button>
                     ) : (
-                      <div className="completed-actions">
-                        <button
-                          className={saved.includes(activeCase.id) ? "save-button saved" : "save-button"}
-                          onClick={() => toggleSave(activeCase.id)}
-                        >
-                          {saved.includes(activeCase.id) ? "已收入招式簿 ✓" : "收入招式簿"}
-                        </button>
-                        <button className="practice-link" onClick={() => navigate("practice")}>换我练一遍 →</button>
+                      <div className="move-final-actions">
+                        <button className="branch-retry" onClick={() => { setSelectedBranch(null); setDialogueStep(1); }}>↻ 换一种对方反应</button>
+                        <div className="completed-actions">
+                          <button
+                            className={saved.includes(activeMove.id) ? "save-button saved" : "save-button"}
+                            onClick={() => toggleSave(activeMove.id)}
+                          >
+                            {saved.includes(activeMove.id) ? "已收入招式簿 ✓" : "收入招式簿"}
+                          </button>
+                          <button className="practice-link" onClick={() => navigate("practice")}>换我练一遍 →</button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -240,9 +288,9 @@ export default function Home() {
                   <button onClick={() => moveCase(1)} aria-label="下一局">→</button>
                 </div>
 
-                {category === "推荐" && activeCaseIndex === 2 && (
+                {category === "全部" && activeCaseIndex === 2 && (
                   <button className="mini-challenge" onClick={() => navigate("practice")}>
-                    <span>已经看了三局</span>
+                    <span>已经拆了三招</span>
                     <strong>换你出招 · 1 分钟挑战 ↗</strong>
                   </button>
                 )}
@@ -264,16 +312,16 @@ export default function Home() {
             <div className="progress-board">
               <div><strong>{saved.length}</strong><span>已收招式</span></div>
               <div><strong>3</strong><span>完成练习</span></div>
-              <div><strong>6</strong><span>可学框架</span></div>
+              <div><strong>8</strong><span>核心招式</span></div>
             </div>
 
             <h2 className="section-title">最近收下的招</h2>
-            {savedCases.length ? (
+            {savedMoves.length ? (
               <div className="saved-list">
-                {savedCases.map((item) => (
-                  <button key={item.id} onClick={() => openSavedCase(item)}>
-                    <span>{item.move}</span>
-                    <p>{item.response}</p>
+                {savedMoves.map((item) => (
+                  <button key={item.id} onClick={() => openSavedMove(item)}>
+                    <span>{item.number} · {item.name}</span>
+                    <p>{item.formula}</p>
                     <b>↗</b>
                   </button>
                 ))}
