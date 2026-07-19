@@ -20,8 +20,20 @@ type SubmissionPost = {
 type Comment = { id: number | string; contentId: string; body: string; createdAt?: string | number };
 type Filter = "all" | "help" | "solved" | "case";
 type Tone = "gentle" | "firm" | "direct";
+type HelpPack = { title?: string; gentle: string; firm: string; direct: string; followUp?: { opponent: string; answer: string } };
 
 const toneLabels: Record<Tone, string> = { gentle: "温和", firm: "坚定", direct: "直接" };
+
+function readHelpPack(post: SubmissionPost | null): HelpPack | null {
+  if (!post || post.kind !== "help" || !post.response) return null;
+  try {
+    const parsed = JSON.parse(post.response) as Partial<HelpPack>;
+    if (!parsed.gentle || !parsed.firm || !parsed.direct) return null;
+    return parsed as HelpPack;
+  } catch {
+    return null;
+  }
+}
 
 export function RealPlaza({ onPublish }: { onPublish: () => void }) {
   const [filter, setFilter] = useState<Filter>("all");
@@ -135,6 +147,8 @@ export function RealPlaza({ onPublish }: { onPublish: () => void }) {
           const seedComments = story?.seedComments.map((body, index) => ({ id: `seed-${index}`, contentId, body })) ?? [];
           const allComments = [...(comments[contentId] ?? []), ...seedComments];
           const tone = tones[contentId] ?? "firm";
+          const helpPack = readHelpPack(post);
+          const liveResponses = helpPack ? { gentle: helpPack.gentle, firm: helpPack.firm, direct: helpPack.direct } : null;
           return (
             <article className="real-card" key={contentId}>
               <div className="story-meta">
@@ -143,7 +157,7 @@ export function RealPlaza({ onPublish }: { onPublish: () => void }) {
               </div>
               <h3>{story?.title ?? post?.title}</h3>
               <p className="story-summary">{story?.scene ?? post?.scene}</p>
-              {(story?.speakerLine || post?.response) && (
+              {(story?.speakerLine || (post?.kind === "case" && post.response)) && (
                 <div className="real-quote"><span>{story ? "对方原话" : "当时这样回"}</span><p>{story?.speakerLine ?? post?.response}</p></div>
               )}
               {post?.imageKey && <img className="submission-image" src={`/api/media?key=${encodeURIComponent(post.imageKey)}`} alt="投稿者上传的情境图片" />}
@@ -158,8 +172,17 @@ export function RealPlaza({ onPublish }: { onPublish: () => void }) {
                 </div>
               )}
 
+              {helpPack && liveResponses && (
+                <div className="answer-box ai-answer-box">
+                  <div className="answer-head"><strong><i>AI</i> 先给你三种接法</strong><div>{(Object.keys(toneLabels) as Tone[]).map((key) => <button key={key} className={tone === key ? "active" : ""} onClick={() => setTones((current) => ({ ...current, [contentId]: key }))}>{toneLabels[key]}</button>)}</div></div>
+                  <p>{liveResponses[tone]}</p>
+                  {helpPack.followUp?.opponent && <details><summary>如果对方继续说… <b>＋</b></summary><div className="follow-up"><span>对方：{helpPack.followUp.opponent}</span><strong>你：{helpPack.followUp.answer}</strong></div></details>}
+                  <small className="ai-answer-note">AI 提供的是表达草稿，请结合现场安全、事实和关系调整。</small>
+                </div>
+              )}
+
               {post?.kind === "case" && post.outcome && <div className="real-outcome"><span>后来</span>{post.outcome}</div>}
-              {post?.kind === "help" && <button className="answer-call" onClick={() => setOpenComments(contentId)}>帮她想一句 →</button>}
+              {post?.kind === "help" && <button className="answer-call" onClick={() => setOpenComments(contentId)}>{helpPack ? "我还有更好的说法 →" : "帮她想一句 →"}</button>}
 
               <div className="community-bar">
                 <button className={mine[contentId]?.like ? "mouth-action active" : "mouth-action"} onClick={() => toggleInteraction(contentId, "toggle-like")} aria-label="开口点赞"><i className="mouth-icon" /><span>{seedLikes + (counts[contentId]?.like ?? 0)}</span></button>

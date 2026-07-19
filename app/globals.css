@@ -2293,20 +2293,20 @@ p {
   position: relative;
   display: inline-block;
   border: 2px solid var(--ink);
-  border-radius: 50% 50% 48% 48%;
-  background: #ff8b85;
+  border-radius: 52% 52% 48% 48% / 68% 68% 40% 40%;
+  background: transparent;
   transform: rotate(-2deg);
+  transition: background 180ms ease, transform 180ms ease;
 }
 
 .mouth-icon::after {
   content: "";
-  width: 10px;
-  height: 3px;
+  width: 12px;
+  height: 0;
   position: absolute;
-  left: 4px;
-  bottom: 1px;
-  border-radius: 50%;
-  background: #7f2943;
+  left: 3px;
+  top: 4px;
+  border-top: 1.5px solid var(--ink);
 }
 
 .mouth-action.active {
@@ -2314,7 +2314,8 @@ p {
   color: #b53f34;
 }
 
-.mouth-action.active .mouth-icon { animation: mouth-pop 240ms ease-out; background: var(--coral); }
+.mouth-action.active .mouth-icon { animation: mouth-pop 240ms ease-out; border-color: #a62934; background: var(--coral); }
+.mouth-action.active .mouth-icon::after { height: 3px; top: auto; bottom: 1px; border: 0; border-radius: 50%; background: #7f2943; }
 
 .move-icon {
   width: 22px;
@@ -2405,6 +2406,45 @@ p {
 .publish-form input:focus, .publish-form textarea:focus, .publish-form select:focus { border-color: var(--violet); box-shadow: 0 0 0 2px rgba(111,80,255,.1); }
 .publish-row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 
+.form-tip {
+  padding: 11px 12px;
+  border-left: 3px solid var(--violet);
+  border-radius: 0 10px 10px 0;
+  background: rgba(111,80,255,.08);
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.55;
+}
+.form-tip b { color: var(--ink); }
+
+.case-source-tabs {
+  padding: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  border-radius: 13px;
+  background: var(--paper-deep);
+}
+.case-source-tabs button { padding: 10px 8px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 9px; font-weight: 900; }
+.case-source-tabs button.active { background: var(--white); color: var(--ink); box-shadow: 0 2px 8px rgba(30,25,48,.08); }
+
+.link-parser, .case-draft { display: grid; gap: 13px; }
+.link-parser { padding: 14px; border: 1px solid rgba(111,80,255,.2); border-radius: 16px 16px 16px 5px; background: rgba(111,80,255,.055); }
+.link-parser > label, .case-draft > label { display: grid; gap: 7px; color: var(--violet-dark); font-size: 9px; font-weight: 900; }
+.ai-label { display: flex; align-items: center; gap: 9px; }
+.ai-label > span, .answer-head strong i { display: inline-grid; place-items: center; border-radius: 7px; background: var(--violet); color: var(--white); font-size: 7px; font-style: normal; font-weight: 900; }
+.ai-label > span { width: 29px; height: 29px; }
+.ai-label > div { display: grid; gap: 2px; }
+.ai-label strong { font-size: 10px; }
+.ai-label small { color: var(--muted); font-size: 7px; }
+.parse-action { min-height: 42px; padding: 0 13px; display: flex; align-items: center; justify-content: space-between; border: 1.5px solid var(--violet); border-radius: 11px; background: var(--violet); color: var(--white); font-size: 9px; font-weight: 900; }
+.parse-action:disabled { opacity: .6; }
+.case-draft.parsed { padding: 14px; border: 1px solid rgba(184,237,207,.8); border-radius: 16px; background: rgba(184,237,207,.2); }
+.draft-ready { padding: 9px 10px; display: grid; gap: 2px; border-radius: 9px; background: var(--mint); }
+.draft-ready b { font-size: 9px; }
+.draft-ready span { color: #466052; font-size: 7px; }
+.image-upload > span small, .publish-form label > span small { color: var(--muted); font-size: 7px; font-weight: 500; }
+
 .image-upload > input { position: absolute; opacity: 0; pointer-events: none; }
 .image-upload > div { min-height: 120px; display: grid; place-items: center; align-content: center; gap: 5px; overflow: hidden; border: 1.5px dashed var(--ink); border-radius: 14px; background: rgba(255,255,255,.55); color: var(--ink); cursor: pointer; }
 .image-upload > div small { color: var(--muted); font-size: 8px; }
@@ -2415,6 +2455,10 @@ p {
 .publish-success h2 { font-size: 18px; }
 .publish-success p { margin: 8px 0 17px; color: #4f5e56; font-size: 10px; line-height: 1.6; }
 
+.ai-answer-box { border-color: rgba(111,80,255,.22); background: linear-gradient(145deg, rgba(111,80,255,.075), var(--white) 38%); }
+.answer-head strong i { width: 22px; height: 19px; margin-right: 3px; }
+.ai-answer-note { display: block; margin-top: 9px; color: var(--muted); font-size: 7px; line-height: 1.45; }
+
 .three-modes { display: grid; grid-template-columns: repeat(3, 1fr); margin: 22px 0 18px; padding: 0; overflow: visible; }
 .three-modes button { min-width: 0; }
 .lesson-library { margin: 0 -18px 14px; padding: 0 18px 5px; display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; }
@@ -2422,6 +2466,25 @@ p {
 .lesson-library button.active { border-color: var(--ink); background: var(--ink); color: var(--white); }
 .logic-example { margin-top: 13px; padding: 11px; border-left: 3px solid var(--coral); background: var(--paper-deep); color: #5e5768; font-size: 10px; line-height: 1.6; }
 .logic-example small { display: block; margin-bottom: 4px; color: var(--violet-dark); font-size: 7px; font-weight: 900; }
+
+.practice-error, .roleplay-error { margin: 0; padding: 9px 10px; border-radius: 9px; background: rgba(255,111,97,.11); color: #a93c35; font-size: 8px; line-height: 1.5; }
+.ai-feedback-action { width: 100%; min-height: 45px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; border: 0; border-radius: 12px; background: var(--violet); color: var(--white); font-size: 9px; font-weight: 900; box-shadow: 4px 4px 0 var(--ink); }
+.ai-feedback-action:disabled { opacity: .65; }
+.ai-feedback-card { margin-top: 12px; padding: 14px; display: grid; grid-template-columns: auto 1fr; gap: 12px; border: 1.5px solid var(--ink); border-radius: 17px 17px 17px 5px; background: var(--white); box-shadow: 4px 4px 0 var(--mint); }
+.feedback-score { width: 58px; height: 58px; display: grid; place-items: center; align-content: center; border: 2px solid var(--ink); border-radius: 50%; background: var(--yellow); }
+.feedback-score strong { font-size: 19px; line-height: 1; }
+.feedback-score span { margin-top: 3px; font-size: 7px; }
+.feedback-verdict { display: grid; align-content: center; gap: 4px; }
+.feedback-verdict small { color: var(--violet-dark); font-size: 7px; font-weight: 900; }
+.feedback-verdict b { font-size: 10px; line-height: 1.5; }
+.feedback-columns { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.feedback-columns > div { padding: 10px; border-radius: 10px; background: var(--paper); }
+.feedback-columns strong { font-size: 8px; }
+.feedback-columns p { margin: 5px 0 0; color: var(--muted); font-size: 8px; line-height: 1.45; }
+.feedback-example, .feedback-question { grid-column: 1 / -1; padding: 10px; border-left: 3px solid var(--coral); background: var(--paper-deep); font-size: 9px; line-height: 1.55; }
+.feedback-question { border-left-color: var(--violet); }
+.feedback-example small, .feedback-question small { display: block; margin-bottom: 4px; color: var(--violet-dark); font-size: 7px; font-weight: 900; }
+.ai-feedback-card > button { grid-column: 1 / -1; padding: 9px; border: 1px solid var(--ink); border-radius: 9px; background: var(--white); font-size: 8px; font-weight: 900; }
 
 .ai-roleplay { overflow: hidden; border: 2px solid var(--ink); border-radius: 21px 21px 21px 6px; background: var(--white); box-shadow: 5px 5px 0 rgba(30,25,48,.13); }
 .roleplay-scene-head { padding: 14px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; background: var(--ink); color: var(--white); }
@@ -2435,6 +2498,10 @@ p {
 .role-turn p { margin: 0; padding: 11px; border: 1px solid var(--line); border-radius: 13px 13px 13px 4px; background: var(--white); font-size: 10px; line-height: 1.55; }
 .role-turn.user { margin-left: auto; justify-items: end; }
 .role-turn.user p { border-color: var(--violet); border-radius: 13px 13px 4px 13px; background: var(--violet); color: var(--white); }
+.role-turn.typing p { width: 54px; display: flex; align-items: center; gap: 4px; }
+.role-turn.typing i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: typing-dot 900ms ease-in-out infinite; }
+.role-turn.typing i:nth-child(2) { animation-delay: 150ms; }
+.role-turn.typing i:nth-child(3) { animation-delay: 300ms; }
 .roleplay-compose { padding: 10px; display: grid; grid-template-columns: 1fr auto auto; gap: 6px; border-top: 1px solid var(--line); }
 .roleplay-compose textarea { min-width: 0; min-height: 62px; padding: 9px; resize: none; border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 9px; }
 .voice-send, .text-send { border: 1px solid var(--ink); border-radius: 9px; font-size: 9px; font-weight: 900; }
@@ -2443,11 +2510,23 @@ p {
 .text-send { padding: 0 10px; background: var(--ink); color: var(--white); }
 .text-send:disabled { opacity: .35; }
 .roleplay-note { margin: 0; padding: 0 12px 12px; color: var(--muted); font-size: 7px; line-height: 1.55; }
+.roleplay-error { margin: 0 12px 10px; }
+.finish-roleplay { width: calc(100% - 24px); min-height: 39px; margin: 0 12px 12px; padding: 0 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--ink); border-radius: 10px; background: var(--yellow); font-size: 8px; font-weight: 900; }
+.finish-roleplay:disabled { opacity: .55; }
 .roleplay-review { margin: 0 12px 12px; padding: 11px; display: grid; gap: 5px; border-radius: 10px; background: rgba(184,237,207,.5); }
 .roleplay-review strong { font-size: 9px; }
 .roleplay-review span { font-size: 8px; }
+.roleplay-review.ai-review { margin-top: 12px; padding: 13px; gap: 11px; }
+.review-scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.review-scores span { padding: 8px 4px; display: grid; place-items: center; border-radius: 9px; background: var(--white); color: var(--muted); font-size: 7px; }
+.review-scores b { color: var(--ink); font-size: 16px; }
+.ai-review p { margin: 4px 0 0; color: #44594d; font-size: 9px; line-height: 1.5; }
+.ai-review blockquote { margin: 0; padding: 10px; border-left: 3px solid var(--violet); background: var(--white); font-size: 9px; line-height: 1.55; }
+.ai-review blockquote small { display: block; margin-bottom: 3px; color: var(--violet-dark); font-size: 7px; font-weight: 900; }
+.ai-review > button { padding: 9px; border: 1px solid var(--ink); border-radius: 9px; background: var(--white); font-size: 8px; font-weight: 900; }
 
 @keyframes mouth-pop { 50% { transform: rotate(-2deg) scale(1.28); } }
+@keyframes typing-dot { 0%, 100% { opacity: .3; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
 
 .bottom-nav {
   width: calc(100% - 22px);
