@@ -1,22 +1,47 @@
-import { desc, eq } from "drizzle-orm";
+import { env } from "cloudflare:workers";
+import { and, desc, eq } from "drizzle-orm";
 
 import { getDb } from "../../../db";
-import { caseSubmissions } from "../../../db/schema";
+import { caseSubmissions, communityComments, communityInteractions } from "../../../db/schema";
 import { generateCaseTitle, generateHelpReplies } from "../../lib/deepseek";
 
 const MAX_SCENE_LENGTH = 1200;
 const MAX_FIELD_LENGTH = 600;
 const MAX_SOURCE_LENGTH = 8000;
 
-export async function GET() {
+const publicPostFields = {
+  id: caseSubmissions.id,
+  kind: caseSubmissions.kind,
+  title: caseSubmissions.title,
+  relation: caseSubmissions.relation,
+  goal: caseSubmissions.goal,
+  scene: caseSubmissions.scene,
+  response: caseSubmissions.response,
+  outcome: caseSubmissions.outcome,
+  imageKey: caseSubmissions.imageKey,
+  status: caseSubmissions.status,
+  createdAt: caseSubmissions.createdAt,
+};
+
+function validVisitorId(value: string) {
+  return value.length >= 16 && value.length <= 100 && /^[a-zA-Z0-9_-]+$/.test(value);
+}
+
+export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const mine = url.searchParams.get("mine") === "1";
+    const visitorId = url.searchParams.get("visitorId")?.trim() ?? "";
+    if (mine && !validVisitorId(visitorId)) return Response.json({ posts: [] });
     const db = getDb();
     const rows = await db
-      .select()
+      .select(publicPostFields)
       .from(caseSubmissions)
-      .where(eq(caseSubmissions.status, "published"))
+      .where(mine
+        ? and(eq(caseSubmissions.status, "published"), eq(caseSubmissions.ownerToken, visitorId))
+        : eq(caseSubmissions.status, "published"))
       .orderBy(desc(caseSubmissions.createdAt))
-      .limit(40);
+      .limit(mine ? 60 : 40);
     return Response.json({ posts: rows });
   } catch {
     return Response.json({ posts: [] });
@@ -37,6 +62,7 @@ export async function POST(request: Request) {
       sourceText?: string;
       imageKey?: string;
       consent?: boolean;
+      visitorId?: string;
     };
 
     const scene = payload.scene?.trim() ?? "";
@@ -49,9 +75,13 @@ export async function POST(request: Request) {
     const sourceText = payload.sourceText?.trim() ?? "";
     const imageKey = payload.imageKey?.trim() ?? "";
     const kind = payload.kind === "case" ? "case" : "help";
+    const ownerToken = payload.visitorId?.trim() ?? "";
 
     if (!payload.consent) {
       return Response.json({ error: "请先确认已经隐去可识别信息" }, { status: 400 });
+    }
+    if (!validVisitorId(ownerToken)) {
+      return Response.json({ error: "发布身份已过期，请刷新页面后重试" }, { status: 400 });
     }
     if (scene.length < 10) {
       return Response.json({ error: "请至少用 10 个字说清楚发生了什么" }, { status: 400 });
@@ -75,12 +105,43 @@ export async function POST(request: Request) {
     const db = getDb();
     const [submission] = await db
       .insert(caseSubmissions)
-      .values({ kind, title, relation, goal, scene, response, outcome, sourceUrl, sourceText, imageKey, status: "published" })
+      .values({ kind, title, relation, goal, scene, response, outcome, sourceUrl, sourceText, imageKey, ownerToken, status: "published" })
       .returning();
 
     return Response.json({ post: submission, status: "published" }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "提交失败，请稍后再试";
     return Response.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const payload = await request.json() as { id?: number; visitorId?: string };
+    const id = Number(payload.id);
+    const visitorId = payload.visitorId?.trim() ?? "";
+    if (!Number.isInteger(id) || id <= 0 || !validVisitorId(visitorId)) {
+      return Response.json({ error: "删除请求无效" }, { status: 400 });
+    }
+
+    const db = getDb();
+    const [ownedPost] = await db
+      .select({ id: caseSubmissions.id, imageKey: caseSubmissions.imageKey })
+      .from(caseSubmissions)
+      .where(and(eq(caseSubmissions.id, id), eq(caseSubmissions.ownerToken, visitorId)))
+      .limit(1);
+    if (!ownedPost) return Response.json({ error: "没有找到这条发布，或它不属于当前设备" }, { status: 404 });
+
+    const contentId = `post-${id}`;
+    await db.delete(communityComments).where(eq(communityComments.contentId, contentId));
+    await db.delete(communityInteractions).where(eq(communityInteractions.contentId, contentId));
+    await db.delete(caseSubmissions).where(and(eq(caseSubmissions.id, id), eq(caseSubmissions.ownerToken, visitorId)));
+
+    if (ownedPost.imageKey) {
+      try { await (env as unknown as { MEDIA?: R2Bucket }).MEDIA?.delete(ownedPost.imageKey); } catch { /* 数据已经删除，不因图片清理失败回滚 */ }
+    }
+    return Response.json({ deleted: true, id });
+  } catch (error) {
+    return Response.json({ error: error instanceof Error ? error.message : "删除失败，请稍后再试" }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react";
 import { PracticeCenter } from "./components/PracticeCenter";
 import { PublishCenter } from "./components/PublishCenter";
 import { RealPlaza } from "./components/RealPlaza";
+import { MySubmissions } from "./components/MySubmissions";
 import { cases, categories, type CaseCard, type Category } from "./data/cases";
 
 const navItems = [
@@ -284,6 +285,8 @@ export default function Home() {
                 <button onClick={() => navigate("plaza")}>去看一局</button>
               </div>
             )}
+
+            <MySubmissions onView={() => { setPlazaView("stories"); navigate("plaza"); }} />
 
             <section className="preview-grid">
               <div>

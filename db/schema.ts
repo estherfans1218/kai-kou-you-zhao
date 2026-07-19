@@ -12,6 +12,7 @@ export const caseSubmissions = sqliteTable("case_submissions", {
   sourceUrl: text("source_url").notNull().default(""),
   sourceText: text("source_text").notNull().default(""),
   imageKey: text("image_key").notNull().default(""),
+  ownerToken: text("owner_token").notNull().default(""),
   status: text("status").notNull().default("pending"),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()

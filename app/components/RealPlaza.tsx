@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { storyCases, type RealStory } from "../data/stories";
+import { getVisitorId } from "../lib/visitor";
 
 type SubmissionPost = {
   id: number;
@@ -38,14 +39,7 @@ function readHelpPack(post: SubmissionPost | null): HelpPack | null {
 export function RealPlaza({ onPublish }: { onPublish: () => void }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [submissions, setSubmissions] = useState<SubmissionPost[]>([]);
-  const [visitorId] = useState(() => {
-    if (typeof window === "undefined") return "";
-    const existing = window.localStorage.getItem("speak-power-visitor-id");
-    if (existing) return existing;
-    const created = crypto.randomUUID();
-    window.localStorage.setItem("speak-power-visitor-id", created);
-    return created;
-  });
+  const [visitorId] = useState(getVisitorId);
   const [counts, setCounts] = useState<Record<string, { like: number; save: number }>>({});
   const [mine, setMine] = useState<Record<string, { like: boolean; save: boolean }>>({});
   const [comments, setComments] = useState<Record<string, Comment[]>>({});

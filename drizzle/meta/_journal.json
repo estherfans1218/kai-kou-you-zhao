@@ -15,6 +15,13 @@
       "when": 1784453917999,
       "tag": "0001_outstanding_proemial_gods",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784467909172,
+      "tag": "0002_nifty_vengeance",
+      "breakpoints": true
     }
   ]
 }

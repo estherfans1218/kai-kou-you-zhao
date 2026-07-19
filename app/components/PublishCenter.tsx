@@ -2,11 +2,14 @@
 
 import { useState, type FormEvent } from "react";
 
+import { getVisitorId } from "../lib/visitor";
+
 type Kind = "help" | "case";
 type CaseMode = "personal" | "link";
 type ParsedCase = { title: string; scene: string; response: string; outcome: string; relation: string };
 
 export function PublishCenter({ onPublished }: { onPublished: () => void }) {
+  const [visitorId] = useState(getVisitorId);
   const [kind, setKind] = useState<Kind>("help");
   const [caseMode, setCaseMode] = useState<CaseMode>("personal");
   const [title, setTitle] = useState("");
@@ -89,7 +92,7 @@ export function PublishCenter({ onPublished }: { onPublished: () => void }) {
       const result = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, title, scene, relation, goal, response, outcome, sourceUrl, sourceText, imageKey, consent }),
+        body: JSON.stringify({ kind, title, scene, relation, goal, response, outcome, sourceUrl, sourceText, imageKey, consent, visitorId }),
       });
       const data = await result.json() as { error?: string };
       if (!result.ok) throw new Error(data.error ?? "发布失败");

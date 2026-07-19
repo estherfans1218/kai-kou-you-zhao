@@ -1,0 +1,1 @@
+ALTER TABLE `case_submissions` ADD `owner_token` text DEFAULT '' NOT NULL;
