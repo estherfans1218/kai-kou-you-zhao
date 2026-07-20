@@ -2,11 +2,36 @@ import { and, desc, eq, sql } from "drizzle-orm";
 
 import { getDb } from "../../../db";
 import { communityComments, communityInteractions } from "../../../db/schema";
+import {
+  deleteNetlifyInteraction,
+  getNetlifyInteraction,
+  isNetlifyRuntime,
+  listNetlifyComments,
+  listNetlifyInteractions,
+  saveNetlifyComment,
+  saveNetlifyInteraction,
+} from "../../lib/netlify-store";
 
 export async function GET(request: Request) {
   try {
     const visitorId = new URL(request.url).searchParams.get("visitorId") ?? "";
-    const db = getDb();
+    if (isNetlifyRuntime()) {
+      const interactions = await listNetlifyInteractions();
+      const countMap = new Map<string, { contentId: string; kind: "like" | "save"; count: number }>();
+      for (const item of interactions) {
+        const key = `${item.contentId}:${item.kind}`;
+        const current = countMap.get(key);
+        countMap.set(key, { contentId: item.contentId, kind: item.kind, count: (current?.count ?? 0) + 1 });
+      }
+      const mine = interactions
+        .filter((item) => item.visitorId === visitorId)
+        .map(({ contentId, kind }) => ({ contentId, kind }));
+      const comments = (await listNetlifyComments())
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 120);
+      return Response.json({ counts: [...countMap.values()], mine, comments });
+    }
+    const db = await getDb();
     const counts = await db
       .select({ contentId: communityInteractions.contentId, kind: communityInteractions.kind, count: sql<number>`count(*)` })
       .from(communityInteractions)
@@ -27,7 +52,26 @@ export async function POST(request: Request) {
     const contentId = payload.contentId?.trim() ?? "";
     const visitorId = payload.visitorId?.trim() ?? "";
     if (!contentId || !visitorId) return Response.json({ error: "缺少互动信息" }, { status: 400 });
-    const db = getDb();
+    if (isNetlifyRuntime()) {
+      if (payload.action === "comment") {
+        const body = payload.body?.trim() ?? "";
+        if (body.length < 2 || body.length > 240) return Response.json({ error: "评论请控制在 2—240 字" }, { status: 400 });
+        const comment = { id: crypto.randomUUID(), contentId, visitorId, body, createdAt: Date.now() };
+        await saveNetlifyComment(comment);
+        return Response.json({ comment }, { status: 201 });
+      }
+
+      const kind = payload.action === "toggle-save" ? "save" as const : "like" as const;
+      const existing = await getNetlifyInteraction(contentId, visitorId, kind);
+      if (existing) {
+        await deleteNetlifyInteraction(contentId, visitorId, kind);
+        return Response.json({ active: false, kind });
+      }
+      await saveNetlifyInteraction({ contentId, visitorId, kind, createdAt: Date.now() });
+      return Response.json({ active: true, kind }, { status: 201 });
+    }
+
+    const db = await getDb();
 
     if (payload.action === "comment") {
       const body = payload.body?.trim() ?? "";

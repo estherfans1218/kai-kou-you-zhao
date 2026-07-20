@@ -1,9 +1,10 @@
-import { env } from "cloudflare:workers";
+import { getNetlifyImage, isNetlifyRuntime, saveNetlifyImage } from "../../lib/netlify-store";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_BYTES = 5 * 1024 * 1024;
 
-function getBucket() {
+async function getBucket() {
+  const { env } = await import("cloudflare:workers");
   const bucket = (env as unknown as { MEDIA?: R2Bucket }).MEDIA;
   if (!bucket) throw new Error("图片存储暂时不可用");
   return bucket;
@@ -19,7 +20,11 @@ export async function POST(request: Request) {
 
     const extension = file.name.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() || "jpg";
     const key = `community/${Date.now()}-${crypto.randomUUID()}.${extension}`;
-    await getBucket().put(key, file.stream(), { httpMetadata: { contentType: file.type } });
+    if (isNetlifyRuntime()) {
+      await saveNetlifyImage(key, file);
+    } else {
+      await (await getBucket()).put(key, file.stream(), { httpMetadata: { contentType: file.type } });
+    }
     return Response.json({ key, url: `/api/media?key=${encodeURIComponent(key)}` }, { status: 201 });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "图片上传失败" }, { status: 500 });
@@ -30,7 +35,17 @@ export async function GET(request: Request) {
   try {
     const key = new URL(request.url).searchParams.get("key") ?? "";
     if (!key.startsWith("community/") || key.includes("..")) return new Response("Not found", { status: 404 });
-    const object = await getBucket().get(key);
+    if (isNetlifyRuntime()) {
+      const entry = await getNetlifyImage(key);
+      if (!entry) return new Response("Not found", { status: 404 });
+      return new Response(entry.data, {
+        headers: {
+          "Content-Type": String(entry.metadata.contentType ?? "application/octet-stream"),
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+    const object = await (await getBucket()).get(key);
     if (!object) return new Response("Not found", { status: 404 });
     const headers = new Headers();
     headers.set("Content-Type", object.httpMetadata?.contentType ?? "application/octet-stream");

@@ -378,15 +378,6 @@ export default function Home() {
         </nav>
       </section>
 
-      <aside className="desktop-note">
-        <span className="eyebrow">开口有招 · MVP</span>
-        <h2>不是替你说，<br />是陪你练成自己的说法。</h2>
-        <p>每次三分钟：看一局、拆一招、练一遍。少刷一点情绪，多带走一种能力。</p>
-        <div className="desktop-legend">
-          <span><i className="dot violet" /> 真实可体验</span>
-          <span><i className="dot coral" /> 概念预览</span>
-        </div>
-      </aside>
     </main>
   );
 }

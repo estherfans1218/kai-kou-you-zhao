@@ -1,9 +1,18 @@
-import { env } from "cloudflare:workers";
 import { and, desc, eq } from "drizzle-orm";
 
 import { getDb } from "../../../db";
 import { caseSubmissions, communityComments, communityInteractions } from "../../../db/schema";
 import { generateCaseTitle, generateHelpReplies } from "../../lib/deepseek";
+import {
+  deleteNetlifyCommentsForContent,
+  deleteNetlifyImage,
+  deleteNetlifyInteractionsForContent,
+  deleteNetlifySubmission,
+  isNetlifyRuntime,
+  listNetlifySubmissions,
+  saveNetlifySubmission,
+  type NetlifySubmission,
+} from "../../lib/netlify-store";
 
 const MAX_SCENE_LENGTH = 1200;
 const MAX_FIELD_LENGTH = 600;
@@ -33,7 +42,15 @@ export async function GET(request: Request) {
     const mine = url.searchParams.get("mine") === "1";
     const visitorId = url.searchParams.get("visitorId")?.trim() ?? "";
     if (mine && !validVisitorId(visitorId)) return Response.json({ posts: [] });
-    const db = getDb();
+    if (isNetlifyRuntime()) {
+      const posts = (await listNetlifySubmissions())
+        .filter((post) => post.status === "published" && (!mine || post.ownerToken === visitorId))
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, mine ? 60 : 40)
+        .map(({ ownerToken: _ownerToken, sourceUrl: _sourceUrl, sourceText: _sourceText, ...post }) => post);
+      return Response.json({ posts });
+    }
+    const db = await getDb();
     const rows = await db
       .select(publicPostFields)
       .from(caseSubmissions)
@@ -102,7 +119,28 @@ export async function POST(request: Request) {
       try { title = await generateCaseTitle(scene, response); } catch { /* 保留匿名默认标题 */ }
     }
 
-    const db = getDb();
+    if (isNetlifyRuntime()) {
+      const submission: NetlifySubmission = {
+        id: Date.now(),
+        kind,
+        title,
+        relation,
+        goal,
+        scene,
+        response,
+        outcome,
+        sourceUrl,
+        sourceText,
+        imageKey,
+        ownerToken,
+        status: "published",
+        createdAt: Date.now(),
+      };
+      await saveNetlifySubmission(submission);
+      return Response.json({ post: submission, status: "published" }, { status: 201 });
+    }
+
+    const db = await getDb();
     const [submission] = await db
       .insert(caseSubmissions)
       .values({ kind, title, relation, goal, scene, response, outcome, sourceUrl, sourceText, imageKey, ownerToken, status: "published" })
@@ -124,7 +162,20 @@ export async function DELETE(request: Request) {
       return Response.json({ error: "删除请求无效" }, { status: 400 });
     }
 
-    const db = getDb();
+    if (isNetlifyRuntime()) {
+      const ownedPost = (await listNetlifySubmissions()).find((post) => post.id === id && post.ownerToken === visitorId);
+      if (!ownedPost) return Response.json({ error: "没有找到这条发布，或它不属于当前设备" }, { status: 404 });
+      const contentId = `post-${id}`;
+      await Promise.all([
+        deleteNetlifyCommentsForContent(contentId),
+        deleteNetlifyInteractionsForContent(contentId),
+        deleteNetlifySubmission(id),
+        ownedPost.imageKey ? deleteNetlifyImage(ownedPost.imageKey) : Promise.resolve(),
+      ]);
+      return Response.json({ deleted: true, id });
+    }
+
+    const db = await getDb();
     const [ownedPost] = await db
       .select({ id: caseSubmissions.id, imageKey: caseSubmissions.imageKey })
       .from(caseSubmissions)
@@ -138,7 +189,10 @@ export async function DELETE(request: Request) {
     await db.delete(caseSubmissions).where(and(eq(caseSubmissions.id, id), eq(caseSubmissions.ownerToken, visitorId)));
 
     if (ownedPost.imageKey) {
-      try { await (env as unknown as { MEDIA?: R2Bucket }).MEDIA?.delete(ownedPost.imageKey); } catch { /* 数据已经删除，不因图片清理失败回滚 */ }
+      try {
+        const { env } = await import("cloudflare:workers");
+        await (env as unknown as { MEDIA?: R2Bucket }).MEDIA?.delete(ownedPost.imageKey);
+      } catch { /* 数据已经删除，不因图片清理失败回滚 */ }
     }
     return Response.json({ deleted: true, id });
   } catch (error) {

@@ -85,6 +85,7 @@ textarea:focus-visible {
   width: 100%;
   max-width: 520px;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
   position: relative;
   z-index: 2;
@@ -2753,10 +2754,8 @@ p {
 
 @media (min-width: 980px) {
   .app-shell {
-    display: grid;
-    grid-template-columns: minmax(520px, 620px) 420px;
+    display: flex;
     justify-content: center;
-    gap: 80px;
     padding: 40px 50px;
   }
 
@@ -2775,15 +2774,12 @@ p {
 
   .bottom-nav {
     width: 498px;
-    left: calc(50% - 250px);
+    left: 50%;
     bottom: 50px;
   }
 
   .desktop-note {
-    position: sticky;
-    top: 22vh;
-    align-self: start;
-    display: block;
+    display: none;
   }
 
   .desktop-note h2 {

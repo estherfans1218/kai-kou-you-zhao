@@ -37,6 +37,7 @@ yarn-error.log*
 
 # typescript
 next-env.d.ts
+*.tsbuildinfo
 /dist/
 /.wrangler/
 /outputs/
@@ -46,3 +47,10 @@ next-env.d.ts
 .dev-server*.log
 ~$*
 *.docx
+
+# private research and product-planning source material
+/01-系统模块架构设计.md
+/02-版本路线图与实现步骤.md
+/03-案例内容编辑说明.md
+/04-招式库规划.md
+/真实案例库21.md

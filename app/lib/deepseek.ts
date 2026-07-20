@@ -1,5 +1,3 @@
-import { env } from "cloudflare:workers";
-
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 type DeepSeekResponse = {
@@ -8,7 +6,15 @@ type DeepSeekResponse = {
 };
 
 export async function askDeepSeek<T>(messages: ChatMessage[], maxTokens = 900): Promise<T> {
-  const apiKey = (env as unknown as { DEEPSEEK_API_KEY?: string }).DEEPSEEK_API_KEY;
+  let apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    try {
+      const { env } = await import("cloudflare:workers");
+      apiKey = (env as unknown as { DEEPSEEK_API_KEY?: string }).DEEPSEEK_API_KEY;
+    } catch {
+      apiKey = undefined;
+    }
+  }
   if (!apiKey) throw new Error("AI 服务尚未配置");
 
   const response = await fetch("https://api.deepseek.com/chat/completions", {
