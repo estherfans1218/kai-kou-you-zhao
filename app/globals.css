@@ -63,6 +63,13 @@ textarea:focus-visible {
   background-size: 34px 34px;
 }
 
+.device-column {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+}
+
 .ambient {
   position: fixed;
   border-radius: 999px;
@@ -2783,21 +2790,37 @@ p {
   display: none;
 }
 
-@media (min-width: 980px) {
+.desktop-qr-card {
+  display: none;
+}
+
+@media (min-width: 768px) {
   .app-shell {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(440px, 520px) minmax(300px, 430px);
+    align-items: center;
     justify-content: center;
-    padding: 40px 50px;
+    gap: clamp(42px, 6vw, 88px);
+    padding: 32px 44px;
+  }
+
+  .device-column {
+    width: min(520px, 42vw);
+    height: auto;
+    display: grid;
+    justify-self: end;
+    gap: 16px;
   }
 
   .phone-stage {
-    height: calc(100vh - 80px);
-    height: calc(100dvh - 80px);
+    width: 100%;
+    height: clamp(520px, calc(100dvh - 176px), 820px);
     margin: 0;
     border: 2px solid var(--ink);
     border-radius: 34px;
     overflow: clip;
     box-shadow: 14px 14px 0 rgba(30, 25, 48, 0.16);
+    transform: translateZ(0);
   }
 
   .topbar {
@@ -2809,7 +2832,8 @@ p {
   }
 
   .desktop-note {
-    display: none;
+    display: block;
+    align-self: center;
   }
 
   .desktop-note h2 {
@@ -2851,6 +2875,69 @@ p {
 
   .dot.violet { background: var(--violet); }
   .dot.coral { background: var(--coral); }
+
+  .desktop-qr-card {
+    width: fit-content;
+    min-width: 232px;
+    padding: 11px 16px 11px 11px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    border: 1.5px solid var(--ink);
+    border-radius: 18px 18px 18px 6px;
+    background: rgba(255, 253, 249, 0.92);
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+
+  .desktop-qr-code {
+    width: 82px;
+    height: 82px;
+    padding: 5px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .desktop-qr-code > span {
+    width: 72px;
+    height: 72px;
+    border-radius: 6px;
+    background: var(--paper-deep);
+  }
+
+  .desktop-qr-card strong,
+  .desktop-qr-card small {
+    display: block;
+  }
+
+  .desktop-qr-card strong {
+    margin-bottom: 5px;
+    font-size: 14px;
+  }
+
+  .desktop-qr-card small {
+    color: var(--muted);
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 767px) {
+  html,
+  body,
+  .app-shell {
+    background: var(--paper);
+  }
+
+  .ambient {
+    display: none;
+  }
+
+  .phone-stage {
+    max-width: none;
+    border: 0;
+    box-shadow: none;
+  }
 }
 
 @media (max-width: 420px) {

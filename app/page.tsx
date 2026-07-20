@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 import { PracticeCenter } from "./components/PracticeCenter";
 import { PublishCenter } from "./components/PublishCenter";
@@ -18,6 +19,7 @@ const navItems = [
 type NavId = (typeof navItems)[number]["id"];
 
 export default function Home() {
+  const [pageUrl, setPageUrl] = useState("");
   const [activeNav, setActiveNav] = useState<NavId>("plaza");
   const [category, setCategory] = useState<MoveCategory>("全部");
   const [activeCaseIndex, setActiveCaseIndex] = useState(0);
@@ -34,6 +36,10 @@ export default function Home() {
   const [plazaView, setPlazaView] = useState<"moves" | "stories">("moves");
   const touchStartY = useRef<number | null>(null);
   const appContentRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setPageUrl(window.location.href);
+  }, []);
 
   const visibleMoves = useMemo(
     () =>
@@ -103,6 +109,7 @@ export default function Home() {
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
 
+      <div className="device-column">
       <section className="phone-stage">
         <header className="topbar">
           <button className="brand" onClick={() => navigate("plaza")}>
@@ -380,6 +387,27 @@ export default function Home() {
           ))}
         </nav>
       </section>
+
+      <div className="desktop-qr-card" aria-label="手机体验二维码">
+        <div className="desktop-qr-code">
+          {pageUrl ? <QRCodeSVG value={pageUrl} size={72} level="M" /> : <span aria-hidden="true" />}
+        </div>
+        <div>
+          <strong>扫码手机体验</strong>
+          <small>用手机打开完整 App</small>
+        </div>
+      </div>
+      </div>
+
+      <aside className="desktop-note">
+        <span className="eyebrow">开口有招 · MVP</span>
+        <h2>不是替你说，<br />是陪你练成自己的说法。</h2>
+        <p>每次三分钟：看一局、拆一招、练一遍。少刷一点情绪，多带走一种能力。</p>
+        <div className="desktop-legend">
+          <span><i className="dot violet" /> 真实可体验</span>
+          <span><i className="dot coral" /> 概念预览</span>
+        </div>
+      </aside>
 
     </main>
   );
