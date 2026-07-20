@@ -1,4 +1,5 @@
 import { getNetlifyImage, isNetlifyRuntime, saveNetlifyImage } from "../../lib/netlify-store";
+import { getVercelImage, isVercelRuntime, saveVercelImage } from "../../lib/vercel-store";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -22,6 +23,8 @@ export async function POST(request: Request) {
     const key = `community/${Date.now()}-${crypto.randomUUID()}.${extension}`;
     if (isNetlifyRuntime()) {
       await saveNetlifyImage(key, file);
+    } else if (isVercelRuntime()) {
+      await saveVercelImage(key, file);
     } else {
       await (await getBucket()).put(key, file.stream(), { httpMetadata: { contentType: file.type } });
     }
@@ -42,6 +45,16 @@ export async function GET(request: Request) {
         headers: {
           "Content-Type": String(entry.metadata.contentType ?? "application/octet-stream"),
           "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+    if (isVercelRuntime()) {
+      const entry = await getVercelImage(key);
+      if (!entry || entry.statusCode !== 200 || !entry.stream) return new Response("Not found", { status: 404 });
+      return new Response(entry.stream, {
+        headers: {
+          "Content-Type": entry.blob.contentType ?? "application/octet-stream",
+          "Cache-Control": "private, max-age=60",
         },
       });
     }

@@ -11,6 +11,15 @@ import {
   saveNetlifyComment,
   saveNetlifyInteraction,
 } from "../../lib/netlify-store";
+import {
+  deleteVercelInteraction,
+  getVercelInteraction,
+  isVercelRuntime,
+  listVercelComments,
+  listVercelInteractions,
+  saveVercelComment,
+  saveVercelInteraction,
+} from "../../lib/vercel-store";
 
 export async function GET(request: Request) {
   try {
@@ -29,6 +38,18 @@ export async function GET(request: Request) {
       const comments = (await listNetlifyComments())
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, 120);
+      return Response.json({ counts: [...countMap.values()], mine, comments });
+    }
+    if (isVercelRuntime()) {
+      const interactions = await listVercelInteractions();
+      const countMap = new Map<string, { contentId: string; kind: "like" | "save"; count: number }>();
+      for (const item of interactions) {
+        const key = `${item.contentId}:${item.kind}`;
+        const current = countMap.get(key);
+        countMap.set(key, { contentId: item.contentId, kind: item.kind, count: (current?.count ?? 0) + 1 });
+      }
+      const mine = interactions.filter((item) => item.visitorId === visitorId).map(({ contentId, kind }) => ({ contentId, kind }));
+      const comments = (await listVercelComments()).sort((a, b) => b.createdAt - a.createdAt).slice(0, 120);
       return Response.json({ counts: [...countMap.values()], mine, comments });
     }
     const db = await getDb();
@@ -68,6 +89,23 @@ export async function POST(request: Request) {
         return Response.json({ active: false, kind });
       }
       await saveNetlifyInteraction({ contentId, visitorId, kind, createdAt: Date.now() });
+      return Response.json({ active: true, kind }, { status: 201 });
+    }
+    if (isVercelRuntime()) {
+      if (payload.action === "comment") {
+        const body = payload.body?.trim() ?? "";
+        if (body.length < 2 || body.length > 240) return Response.json({ error: "评论请控制在 2—240 字" }, { status: 400 });
+        const comment = { id: crypto.randomUUID(), contentId, visitorId, body, createdAt: Date.now() };
+        await saveVercelComment(comment);
+        return Response.json({ comment }, { status: 201 });
+      }
+      const kind = payload.action === "toggle-save" ? "save" as const : "like" as const;
+      const existing = await getVercelInteraction(contentId, visitorId, kind);
+      if (existing) {
+        await deleteVercelInteraction(contentId, visitorId, kind);
+        return Response.json({ active: false, kind });
+      }
+      await saveVercelInteraction({ contentId, visitorId, kind, createdAt: Date.now() });
       return Response.json({ active: true, kind }, { status: 201 });
     }
 

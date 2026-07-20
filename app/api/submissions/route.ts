@@ -13,6 +13,16 @@ import {
   saveNetlifySubmission,
   type NetlifySubmission,
 } from "../../lib/netlify-store";
+import {
+  deleteVercelCommentsForContent,
+  deleteVercelImage,
+  deleteVercelInteractionsForContent,
+  deleteVercelSubmission,
+  isVercelRuntime,
+  listVercelSubmissions,
+  saveVercelSubmission,
+  type VercelSubmission,
+} from "../../lib/vercel-store";
 
 const MAX_SCENE_LENGTH = 1200;
 const MAX_FIELD_LENGTH = 600;
@@ -44,6 +54,14 @@ export async function GET(request: Request) {
     if (mine && !validVisitorId(visitorId)) return Response.json({ posts: [] });
     if (isNetlifyRuntime()) {
       const posts = (await listNetlifySubmissions())
+        .filter((post) => post.status === "published" && (!mine || post.ownerToken === visitorId))
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, mine ? 60 : 40)
+        .map(({ ownerToken: _ownerToken, sourceUrl: _sourceUrl, sourceText: _sourceText, ...post }) => post);
+      return Response.json({ posts });
+    }
+    if (isVercelRuntime()) {
+      const posts = (await listVercelSubmissions())
         .filter((post) => post.status === "published" && (!mine || post.ownerToken === visitorId))
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, mine ? 60 : 40)
@@ -139,6 +157,14 @@ export async function POST(request: Request) {
       await saveNetlifySubmission(submission);
       return Response.json({ post: submission, status: "published" }, { status: 201 });
     }
+    if (isVercelRuntime()) {
+      const submission: VercelSubmission = {
+        id: Date.now(), kind, title, relation, goal, scene, response, outcome,
+        sourceUrl, sourceText, imageKey, ownerToken, status: "published", createdAt: Date.now(),
+      };
+      await saveVercelSubmission(submission);
+      return Response.json({ post: submission, status: "published" }, { status: 201 });
+    }
 
     const db = await getDb();
     const [submission] = await db
@@ -171,6 +197,18 @@ export async function DELETE(request: Request) {
         deleteNetlifyInteractionsForContent(contentId),
         deleteNetlifySubmission(id),
         ownedPost.imageKey ? deleteNetlifyImage(ownedPost.imageKey) : Promise.resolve(),
+      ]);
+      return Response.json({ deleted: true, id });
+    }
+    if (isVercelRuntime()) {
+      const ownedPost = (await listVercelSubmissions()).find((post) => post.id === id && post.ownerToken === visitorId);
+      if (!ownedPost) return Response.json({ error: "没有找到这条发布，或它不属于当前设备" }, { status: 404 });
+      const contentId = `post-${id}`;
+      await Promise.all([
+        deleteVercelCommentsForContent(contentId),
+        deleteVercelInteractionsForContent(contentId),
+        deleteVercelSubmission(id),
+        ownedPost.imageKey ? deleteVercelImage(ownedPost.imageKey) : Promise.resolve(),
       ]);
       return Response.json({ deleted: true, id });
     }
