@@ -1,98 +1,161 @@
-# vinext-starter
+# 开口有招
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+> 看一局，学一招，练成自己的说法。
 
-## Prerequisites
+「开口有招」是一个面向女性复杂沟通场景的案例策略库与 AI 表达训练场。它帮助用户在职场、消费、家庭和社交中的高压对话里，减少大脑空白、事后懊恼和反复内耗，把被动消耗的“生存时间”重新变成可掌控的表达能力。
 
-- Node.js `>=22.13.0`
+项目为 **Coding Lady 2026 · 她来创造** 黑客松作品，对应「生存时间」命题。
 
-## Quick Start
+## 在线体验
+
+- 产品地址：https://kai-kou-you-zhao.congzx22.chatgpt.site
+- 建议体验路径：`真实局 → 本局对应招式 → 练习 → 自由对练 → AI 复盘`
+
+## 为什么不是一个“帮你怼人”的聊天机器人
+
+很多沟通产品只给出一句临时生成的回答，但用户下一次遇到相似情境时仍然不会组织语言。「开口有招」把产品拆成三个互相配合的层次：
+
+1. **循证招式库决定教什么**：用非形式逻辑、DBT 人际效能、NVC 和原则性谈判整理可复用的表达结构。
+2. **真实局说明在什么场景使用**：把每一招放入不同权力关系和连续对话中，展示对方继续施压时如何回应。
+3. **AI 教练负责迁移和反馈**：根据用户输入生成新的情境、扮演对方进行多轮对练，并对用户的表达结构给出反馈。
+
+AI 不代替用户判断现场安全，也不会把“吵赢”设为唯一目标。成功可以是澄清事实、守住边界、拿到明确答复、留下记录，或者安全结束对话。
+
+## 当前可体验功能
+
+### 招式与案例
+
+- 8 个有理论依据的核心招式；
+- 每招包含 3 回合、4 种对方反应的最小决策树；
+- 16 个跨场景案例：职场 6、消费 4、家庭 3、社交 3；
+- 每个真实局可一键回到对应招式；
+- 温和、坚定、直接三种表达语气；
+- 点赞、收招、评论和按招式筛选。
+
+### AI 训练
+
+- **费曼复述**：用户用自己的话复述招式，AI 从准确性、遗漏点和可执行性反馈；
+- **分支剧情**：以文字冒险形式选择应对，进入不同后续和结局；
+- **自由对练**：DeepSeek 实时扮演对方，支持文字输入和浏览器语音转文字；
+- **对练复盘**：从目标、事实、边界、下一步和风险等维度给出反馈；
+- **案例解析**：整理用户输入或公开链接中的关键对话，生成可编辑草稿；
+- **求助回应**：为具体情境生成不同语气的回应与后续追问。
+
+### 社区与个人记录
+
+- 发布求助或分享好案例；
+- 上传情境图片；
+- 发布内容进入真实局广场；
+- 匿名设备级“我的发布”记录；
+- 发布者可删除自己的内容。
+
+## 八个核心招式
+
+| 招式 | 解决的问题 |
+|---|---|
+| 把话落地 | 把模糊评价问成具体事实 |
+| 拒绝接帽 | 讨论具体事件，不接人格结论 |
+| 把代价摆桌上 | 让新增任务对应明确取舍 |
+| 拉回原题 | 不跟着偷换后的命题争辩 |
+| 边界三句 | 用事实、影响和具体请求表达边界 |
+| 给出下一步 | 从解释原因转向选择和行动 |
+| 用标准说话 | 回到订单、记录、约定或共同标准 |
+| 留痕、升级或离场 | 停止无效回合，转向有效渠道 |
+
+详细依据见 [`04-招式库规划.md`](./04-招式库规划.md)，案例编辑与来源规则见 [`03-案例内容编辑说明.md`](./03-案例内容编辑说明.md)。
+
+## 技术架构
+
+```text
+Next / React 前端
+  ├─ 招式广场与连续案例
+  ├─ 发布中心与个人记录
+  └─ 三种练习模式
+
+Server API
+  ├─ DeepSeek：对练、反馈、解析与回应草稿
+  ├─ D1：投稿、互动和评论
+  └─ R2：用户上传图片
+
+OpenAI Sites / Cloudflare Worker
+  └─ 构建、运行与托管
+```
+
+主要技术：TypeScript、React 19、Next 16、vinext、Cloudflare D1、R2、Drizzle ORM、DeepSeek API。
+
+## AI 工具使用说明
+
+- 使用 **Codex** 辅助需求整理、产品规划、前后端实现、调试、内容结构化和部署；
+- 使用 **DeepSeek API** 实现费曼反馈、多轮角色对练、对练复盘、案例解析和求助回应；
+- 招式框架、理论来源、案例筛选、风险边界和最终产品决策由团队审核；
+- DeepSeek Key 只配置在托管平台的服务端环境变量中，不写入前端、源码或 Git 历史。
+
+## 本地运行
+
+要求 Node.js `>=22.13.0`。
 
 ```bash
 npm install
+```
+
+复制环境变量示例并填写自己的 DeepSeek Key：
+
+```bash
+copy .env.example .env.local
+```
+
+```env
+DEEPSEEK_API_KEY=your_deepseek_api_key
+```
+
+启动开发环境：
+
+```bash
 npm run dev
+```
+
+构建验证：
+
+```bash
 npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+没有配置 Key 时，静态招式、案例和分支练习仍可使用，实时 AI 功能不可用。
 
-## Included Shape
+## 主要目录
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```text
+app/
+  api/             服务端 AI、投稿、互动与媒体接口
+  components/      发布、练习、真实局与个人记录组件
+  data/            招式、案例与教学内容
+  lib/             DeepSeek、数据访问与匿名访客逻辑
+db/                D1 数据结构
+drizzle/           数据库迁移
+public/            公开静态资源
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+## 内容与安全边界
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+- 案例按“已核验公开案例 / 公开分享情境改编 / 综合情境 / 用户亲历投稿”区分来源；
+- 不复制平台原帖全文、账号身份、头像或其他可识别信息；
+- AI 回应是表达草稿，不构成法律、医疗或安全保证；
+- 面对威胁、跟踪或人身风险时，产品优先建议离场、联系可信的人或当地紧急服务；
+- 对持续骚扰者不鼓励为了说完一句漂亮回应而留在危险现场。
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+## 黑客松原创性
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+- 创作期：2026 年 7 月 18 日 00:00 至 7 月 20 日 23:59；
+- 本仓库首次提交：2026 年 7 月 18 日 20:57（UTC+8）；
+- 项目代码、可运行产品与功能实现均在正式创作期内完成；
+- 创作期前只进行了问题讨论、需求规划、资料准备与原型思考。
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+## 团队协作
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+- **人类沟通师**：问题洞察、用户情境、案例筛选、招式框架、内容审核与产品表达；
+- **全栈工程师**：前后端实现、数据结构、AI 接口、部署和稳定性验证；
+- 两种角色共同完成产品决策、真实局设计、演示流程与风险边界审核。
 
-## Useful Commands
+## 当前版本范围
 
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+这是三天黑客松完成的可运行 MVP。当前优先验证“真实局—拆招—练习—反馈”是否能帮助用户迁移表达结构；完整账号系统、人工内容审核后台、更多语音能力和长期训练数据分析属于后续版本。
