@@ -85,6 +85,18 @@ export default function Home() {
     navigate("plaza");
   }
 
+  function openMoveFromStory(moveId: string) {
+    const item = moves.find((entry) => entry.id === moveId);
+    if (!item) return;
+    const categoryMoves = moves.filter((entry) => entry.category === item.category);
+    setPlazaView("moves");
+    setCategory(item.category);
+    setActiveCaseIndex(Math.max(0, categoryMoves.findIndex((entry) => entry.id === item.id)));
+    setDialogueStep(1);
+    setSelectedBranch(null);
+    navigate("plaza");
+  }
+
   return (
     <main className="app-shell">
       <div className="ambient ambient-one" />
@@ -297,7 +309,7 @@ export default function Home() {
               </section>
             )}
 
-            {plazaView === "stories" && <RealPlaza onPublish={() => navigate("ask")} />}
+            {plazaView === "stories" && <RealPlaza onPublish={() => navigate("ask")} onOpenMove={openMoveFromStory} />}
           </div>
         )}
 

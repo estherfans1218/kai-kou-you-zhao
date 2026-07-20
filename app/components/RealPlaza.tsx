@@ -36,8 +36,10 @@ function readHelpPack(post: SubmissionPost | null): HelpPack | null {
   }
 }
 
-export function RealPlaza({ onPublish }: { onPublish: () => void }) {
+export function RealPlaza({ onPublish, onOpenMove }: { onPublish: () => void; onOpenMove: (moveId: string) => void }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [moveFilter, setMoveFilter] = useState("all");
+  const [visibleCount, setVisibleCount] = useState(6);
   const [submissions, setSubmissions] = useState<SubmissionPost[]>([]);
   const [visitorId] = useState(getVisitorId);
   const [counts, setCounts] = useState<Record<string, { like: number; save: number }>>({});
@@ -115,25 +117,42 @@ export function RealPlaza({ onPublish }: { onPublish: () => void }) {
   const items = useMemo(() => {
     const seeded = storyCases.map((story) => ({ type: story.kind, id: story.id, story }));
     const posted = submissions.map((post) => ({ type: post.kind, id: `post-${post.id}`, post }));
-    return [...posted, ...seeded].filter((item) => filter === "all" || item.type === filter);
-  }, [filter, submissions]);
+    return [...posted, ...seeded].filter((item) => {
+      if (filter !== "all" && item.type !== filter) return false;
+      if (moveFilter === "all") return true;
+      return "story" in item && item.story.moveId === moveFilter;
+    });
+  }, [filter, moveFilter, submissions]);
+
+  const moveOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const story of storyCases) seen.set(story.moveId, story.moveLabel.replace(/^第\s*/, ""));
+    return Array.from(seen.entries());
+  }, []);
 
   return (
     <section className="real-plaza">
       <div className="stories-intro">
         <span className="eyebrow">具体的局，具体地回</span>
         <h2>如果是你，这句话怎么接？</h2>
-        <p>求助、已经有解的情境和真实案例都在这里。人物信息已匿名处理。</p>
+        <p>16 个跨职场、消费、家庭与社交的连续局。先看具体回答，再回到它背后的招。</p>
       </div>
 
       <div className="real-filters">
         {([['all', '全部'], ['help', '求助中'], ['solved', '已有解'], ['case', '案例分享']] as const).map(([id, label]) => (
-          <button key={id} className={filter === id ? "active" : ""} onClick={() => setFilter(id)}>{label}</button>
+          <button key={id} className={filter === id ? "active" : ""} onClick={() => { setFilter(id); setVisibleCount(6); }}>{label}</button>
+        ))}
+      </div>
+
+      <div className="move-filters" aria-label="按对应招式筛选">
+        <button className={moveFilter === "all" ? "active" : ""} onClick={() => { setMoveFilter("all"); setVisibleCount(6); }}>全部招式</button>
+        {moveOptions.map(([id, label]) => (
+          <button key={id} className={moveFilter === id ? "active" : ""} onClick={() => { setMoveFilter(id); setVisibleCount(6); }}>{label}</button>
         ))}
       </div>
 
       <div className="story-list">
-        {items.map((item) => {
+        {items.slice(0, visibleCount).map((item) => {
           const story = "story" in item ? item.story as RealStory : null;
           const post = "post" in item ? item.post as SubmissionPost : null;
           const contentId = item.id;
@@ -149,8 +168,14 @@ export function RealPlaza({ onPublish }: { onPublish: () => void }) {
                 <span>{item.type === "help" ? "求助中" : item.type === "solved" ? "已有解" : "案例分享"}</span>
                 <small>{story?.category ?? `${post?.relation} · ${post?.goal}`}</small>
               </div>
+              {story && (
+                <button className="linked-move" onClick={() => onOpenMove(story.moveId)}>
+                  <span>本局对应</span><strong>{story.moveLabel}</strong><b>去拆招 ↗</b>
+                </button>
+              )}
               <h3>{story?.title ?? post?.title}</h3>
               <p className="story-summary">{story?.scene ?? post?.scene}</p>
+              {story && <div className="story-context"><span>目标 · {story.goal}</span><span>关系 · {story.power}</span></div>}
               {(story?.speakerLine || (post?.kind === "case" && post.response)) && (
                 <div className="real-quote"><span>{story ? "对方原话" : "当时这样回"}</span><p>{story?.speakerLine ?? post?.response}</p></div>
               )}
@@ -194,6 +219,12 @@ export function RealPlaza({ onPublish }: { onPublish: () => void }) {
           );
         })}
       </div>
+
+      {visibleCount < items.length && (
+        <button className="load-more-stories" onClick={() => setVisibleCount((current) => current + 6)}>
+          再看 6 局 <span>{visibleCount} / {items.length}</span>
+        </button>
+      )}
 
       <button className="submit-story-trigger" onClick={onPublish}><span>＋</span><div><strong>发布一个真实的局</strong><small>可以求助，也可以分享你收藏的好案例</small></div></button>
     </section>
