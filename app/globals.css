@@ -2797,7 +2797,7 @@ p {
 @media (min-width: 768px) {
   .app-shell {
     display: grid;
-    grid-template-columns: minmax(440px, 520px) minmax(300px, 430px);
+    grid-template-columns: minmax(332px, 420px) minmax(360px, 520px);
     align-items: center;
     justify-content: center;
     gap: clamp(42px, 6vw, 88px);
@@ -2805,16 +2805,14 @@ p {
   }
 
   .device-column {
-    width: min(520px, 42vw);
-    height: auto;
-    display: grid;
+    width: clamp(332px, 46.15dvh, 388px);
+    height: min(840px, calc(100dvh - 88px));
     justify-self: end;
-    gap: 16px;
   }
 
   .phone-stage {
     width: 100%;
-    height: clamp(520px, calc(100dvh - 176px), 820px);
+    height: 100%;
     margin: 0;
     border: 2px solid var(--ink);
     border-radius: 34px;
@@ -2834,6 +2832,7 @@ p {
   .desktop-note {
     display: block;
     align-self: center;
+    max-width: 520px;
   }
 
   .desktop-note h2 {
@@ -2879,6 +2878,7 @@ p {
   .desktop-qr-card {
     width: fit-content;
     min-width: 232px;
+    margin-top: 34px;
     padding: 11px 16px 11px 11px;
     display: flex;
     align-items: center;

@@ -388,15 +388,6 @@ export default function Home() {
         </nav>
       </section>
 
-      <div className="desktop-qr-card" aria-label="手机体验二维码">
-        <div className="desktop-qr-code">
-          {pageUrl ? <QRCodeSVG value={pageUrl} size={72} level="M" /> : <span aria-hidden="true" />}
-        </div>
-        <div>
-          <strong>扫码手机体验</strong>
-          <small>用手机打开完整 App</small>
-        </div>
-      </div>
       </div>
 
       <aside className="desktop-note">
@@ -406,6 +397,15 @@ export default function Home() {
         <div className="desktop-legend">
           <span><i className="dot violet" /> 真实可体验</span>
           <span><i className="dot coral" /> 概念预览</span>
+        </div>
+        <div className="desktop-qr-card" aria-label="手机体验二维码">
+          <div className="desktop-qr-code">
+            {pageUrl ? <QRCodeSVG value={pageUrl} size={72} level="M" /> : <span aria-hidden="true" />}
+          </div>
+          <div>
+            <strong>扫码手机体验</strong>
+            <small>用手机打开完整 App</small>
+          </div>
         </div>
       </aside>
 
