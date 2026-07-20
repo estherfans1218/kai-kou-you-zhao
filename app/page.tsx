@@ -33,6 +33,7 @@ export default function Home() {
   });
   const [plazaView, setPlazaView] = useState<"moves" | "stories">("moves");
   const touchStartY = useRef<number | null>(null);
+  const appContentRef = useRef<HTMLDivElement | null>(null);
 
   const visibleMoves = useMemo(
     () =>
@@ -58,7 +59,7 @@ export default function Home() {
 
   function navigate(id: NavId) {
     setActiveNav(id);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    appContentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function switchCategory(nextCategory: MoveCategory) {
@@ -117,6 +118,7 @@ export default function Home() {
           </button>
         </header>
 
+        <div className="app-content" ref={appContentRef}>
         {activeNav === "plaza" && (
           <div className="page plaza-page">
             <div className="page-intro">
@@ -362,6 +364,7 @@ export default function Home() {
             </section>
           </div>
         )}
+        </div>
 
         <nav className="bottom-nav" aria-label="主要导航">
           {navItems.map((item) => (

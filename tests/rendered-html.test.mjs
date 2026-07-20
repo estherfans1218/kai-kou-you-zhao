@@ -22,6 +22,7 @@ test("server-renders the product shell", async () => {
   const html = await response.text();
   assert.match(html, /<title>开口有招/);
   assert.match(html, /class="phone-stage"/);
+  assert.match(html, /class="app-content"/);
   assert.match(html, /招式广场/);
   assert.match(html, /真实局/);
   assert.match(html, /练习/);
@@ -36,8 +37,12 @@ test("keeps the interface mobile-first at every viewport", async () => {
   ]);
 
   assert.doesNotMatch(page, /desktop-note/);
+  assert.doesNotMatch(page, /window\.scrollTo/);
   assert.match(css, /\.phone-stage\s*\{[^}]*width:\s*100%[^}]*max-width:\s*520px/s);
-  assert.match(css, /min-height:\s*100dvh/);
+  assert.match(css, /\.phone-stage\s*\{[^}]*height:\s*100dvh[^}]*overflow:\s*hidden/s);
+  assert.match(css, /\.app-content\s*\{[^}]*overflow-y:\s*auto/s);
+  assert.match(css, /\.bottom-nav\s*\{[^}]*position:\s*absolute[^}]*left:\s*11px/s);
+  assert.match(css, /body\s*\{[^}]*overflow:\s*hidden/s);
   assert.match(css, /@media \(min-width:\s*980px\)[\s\S]*\.app-shell\s*\{[^}]*display:\s*flex[^}]*justify-content:\s*center/s);
-  assert.match(css, /@media \(min-width:\s*980px\)[\s\S]*\.bottom-nav\s*\{[^}]*left:\s*50%/s);
+  assert.match(css, /@media \(min-width:\s*980px\)[\s\S]*\.phone-stage\s*\{[^}]*height:\s*calc\(100dvh - 80px\)/s);
 });
